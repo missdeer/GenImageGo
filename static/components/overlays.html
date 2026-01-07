@@ -1,0 +1,18 @@
+    <div id="lightbox" class="lightbox-overlay" onclick="closeLightbox()">
+        <span class="lightbox-close">&times;</span>
+        <img class="lightbox-img" id="lightbox-image" src="" onclick="event.stopPropagation()">
+    </div>
+
+    <!-- Toast 提示 -->
+    <div id="toast" class="toast-msg"></div>
+
+    <!-- 全局加载遮罩 -->
+    <div id="global-loading" class="global-loading">
+        <div class="global-loading-spinner"></div>
+        <div class="global-loading-text" id="global-loading-text">加载中...</div>
+    </div>
+
+    <!-- 进度条 -->
+    <div id="progress-bar-container" class="progress-bar-container">
+        <div id="progress-bar" class="progress-bar"></div>
+    </div>

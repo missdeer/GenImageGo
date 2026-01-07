@@ -1,0 +1,125 @@
+        <div class="settings-inner">
+            <h2 style="font-size:16px; font-weight:600; margin-bottom:24px; color:#202124;">绘图设置</h2>
+            <button class="theme-toggle-btn" onclick="toggleTheme()">
+                <svg class="theme-icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="5" />
+                    <line x1="12" y1="1" x2="12" y2="3" />
+                    <line x1="12" y1="21" x2="12" y2="23" />
+                    <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+                    <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+                    <line x1="1" y1="12" x2="3" y2="12" />
+                    <line x1="21" y1="12" x2="23" y2="12" />
+                    <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+                    <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+                </svg>
+                <svg class="theme-icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+                </svg>
+                <span id="theme-toggle-text">切换暗黑模式</span>
+            </button>
+
+            <label class="config-label">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    style="vertical-align: middle; margin-right: 4px;">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                </svg>
+                对话上下文
+            </label>
+            <div style="margin-bottom: 24px; padding: 12px; background: #f8f9fa; border-radius: 8px;">
+                <label
+                    style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13px; color: #444; user-select: none; margin-bottom: 12px;">
+                    <input type="checkbox" id="context-toggle" style="width: 16px; height: 16px; cursor: pointer;">
+                    <span>启用对话上下文（AI可记住历史对话）</span>
+                </label>
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                    <label style="font-size: 12px; color: #666; min-width: 80px;">保留条数：</label>
+                    <select id="context-count"
+                        style="flex: 1; padding: 6px 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 12px; background: #fff;">
+                        <option value="3">最近 3 条对话</option>
+                        <option value="5" selected>最近 5 条对话</option>
+                        <option value="10">最近 10 条对话</option>
+                        <option value="20">最近 20 条对话</option>
+                    </select>
+                </div>
+                <div style="font-size: 11px; color: #888; line-height: 1.4;">
+                    💡 启用后，AI可以基于之前的对话和图片继续创作<br>
+                    ⚠️ 保留条数越多，消耗的 Token 越多
+                </div>
+            </div>
+
+            <label class="config-label">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    style="vertical-align: middle; margin-right: 4px;">
+                    <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                    <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                    <polyline points="7 3 7 8 15 8"></polyline>
+                </svg>
+                自动保存到本地
+            </label>
+            <div style="margin-bottom: 24px; padding: 12px; background: #f8f9fa; border-radius: 8px;">
+                <label
+                    style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13px; color: #444; user-select: none; margin-bottom: 12px;">
+                    <input type="checkbox" id="auto-save-toggle" style="width: 16px; height: 16px; cursor: pointer;">
+                    <span>启用自动保存（不占用浏览器空间）</span>
+                </label>
+                <button class="config-btn" onclick="FileSystemManager.selectDirectory()"
+                    style="width: 100%; margin-bottom: 8px;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        style="vertical-align: middle; margin-right: 4px;">
+                        <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+                    </svg>
+                    选择保存目录
+                </button>
+                <div id="selected-dir-path"
+                    style="font-size: 12px; color: #666; padding: 8px; background: #fff; border-radius: 4px; word-break: break-all; display: none;">
+                    <strong>当前目录：</strong><span id="dir-path-text">未选择</span>
+                </div>
+                <div style="font-size: 11px; color: #888; margin-top: 8px; line-height: 1.4;">
+                    💡 启用后，生成的图片将自动保存到选择的目录<br>
+                    ⚠️ 需要 Chrome 86+ 或 Edge 86+ 浏览器支持
+                </div>
+            </div>
+
+            <label class="config-label">分辨率</label>
+            <div class="res-selector">
+                <div class="res-btn" data-val="1024x1024">1K</div>
+                <div class="res-btn" data-val="2048x2048">2K</div>
+                <div class="res-btn active" data-val="4K">4K</div>
+            </div>
+            <label class="config-label">宽高比 (默认 Auto)</label>
+            <div class="ratio-grid">
+                <div class="ratio-card active" data-val="auto">
+                    <div class="icon-box icon-auto"></div><span class="ratio-text">Auto</span>
+                </div>
+                <div class="ratio-card" data-val="21:9">
+                    <div class="icon-box icon-21-9"></div><span class="ratio-text">21:9</span>
+                </div>
+                <div class="ratio-card" data-val="16:9">
+                    <div class="icon-box icon-16-9"></div><span class="ratio-text">16:9</span>
+                </div>
+                <div class="ratio-card" data-val="3:2">
+                    <div class="icon-box icon-3-2"></div><span class="ratio-text">3:2</span>
+                </div>
+                <div class="ratio-card" data-val="4:3">
+                    <div class="icon-box icon-4-3"></div><span class="ratio-text">4:3</span>
+                </div>
+                <div class="ratio-card" data-val="5:4">
+                    <div class="icon-box icon-5-4"></div><span class="ratio-text">5:4</span>
+                </div>
+                <div class="ratio-card" data-val="1:1">
+                    <div class="icon-box icon-1-1"></div><span class="ratio-text">1:1</span>
+                </div>
+                <div class="ratio-card" data-val="4:5">
+                    <div class="icon-box icon-4-5"></div><span class="ratio-text">4:5</span>
+                </div>
+                <div class="ratio-card" data-val="3:4">
+                    <div class="icon-box icon-3-4"></div><span class="ratio-text">3:4</span>
+                </div>
+                <div class="ratio-card" data-val="2:3">
+                    <div class="icon-box icon-2-3"></div><span class="ratio-text">2:3</span>
+                </div>
+                <div class="ratio-card" data-val="9:16">
+                    <div class="icon-box icon-9-16"></div><span class="ratio-text">9:16</span>
+                </div>
+            </div>
+        </div>

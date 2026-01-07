@@ -1,0 +1,49 @@
+/* Slice Modal */
+#slice-modal { position: fixed; inset: 0; z-index: 3000; background: #ffffff; display: none; flex-direction: column; align-items: center; padding-top: var(--header-height); }
+#slice-modal.active { display: flex; }
+.slice-header-bar { position: absolute; top: 0; left: 0; right: 0; height: var(--header-height); border-bottom: 1px solid #e0e0e0; display: flex; justify-content: space-between; align-items: center; padding: 0 24px; background: #fff; z-index: 10; }
+.slice-title { font-size: 18px; color: #202124; font-weight: 500; display: flex; align-items: center; gap: 10px; }
+.slice-close { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #5f6368; transition: background 0.2s; }
+.slice-close:hover { background: #f1f3f4; color: #202124; }
+.slice-toolbar { width: 100%; max-width: 1000px; padding: 16px 24px; display: flex; gap: 16px; align-items: center; justify-content: center; flex-wrap: wrap; background: #fff; border-bottom: 1px solid #f0f0f0; margin-bottom: 20px; flex-shrink: 0; }
+.slice-btn-group { display: flex; gap: 4px; background: #f1f3f4; padding: 4px; border-radius: 8px; align-items: center; }
+.radio-label { padding: 6px 12px; cursor: pointer; font-size: 13px; color: #5f6368; border-radius: 6px; transition: all 0.2s; font-weight: 500; display: flex; align-items: center; gap: 6px; }
+.radio-label:hover { color: #202124; background: rgba(255,255,255,0.5); }
+.radio-label input { margin: 0; }
+.radio-label.active { background: #fff; color: #1a73e8; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
+.slice-action-btn { padding: 8px 20px; cursor: pointer; border: none; border-radius: 20px; font-size: 13px; font-weight: 500; transition: all 0.2s; display: flex; align-items: center; gap: 6px; text-decoration: none; }
+.slice-action-btn.primary { background-color: #1a73e8; color: white; box-shadow: 0 1px 3px rgba(26, 115, 232, 0.3); }
+.slice-action-btn.primary:disabled { background-color: #dadce0; color: #fff; cursor: not-allowed; box-shadow: none; }
+.slice-action-btn.secondary { background-color: #fff; color: #5f6368; border: 1px solid #dadce0; }
+.slice-action-btn.download-all { background-color: #1e8e3e; color: white; }
+.slice-action-btn.download-all:hover { background-color: #188038; }
+.slice-action-btn.download-all:disabled { background-color: #dadce0; }
+.slice-scroll-area { flex: 1; width: 100%; overflow-y: auto; padding: 0 20px 60px 20px; display: flex; flex-direction: column; align-items: center; }
+#slice-editor-container { flex-shrink: 0; position: relative; box-shadow: 0 4px 24px rgba(0,0,0,0.08); background-image: linear-gradient(45deg, #eee 25%, transparent 25%, transparent 75%, #eee 75%), linear-gradient(45deg, #eee 25%, transparent 25%, transparent 75%, #eee 75%); background-color: #fff; background-size: 20px 20px; background-position: 0 0, 10px 10px; user-select: none; margin-bottom: 30px; border-radius: 8px; overflow: hidden; border: 1px solid #dadce0; max-width: 100%; min-height: 100px; }
+#slice-empty-msg { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #888; cursor: pointer; z-index: 5; }
+#slice-source-image { display: block; max-width: 100%; max-height: 65vh; pointer-events: none; }
+#slice-overlay-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; cursor: crosshair; touch-action: none; }
+.split-line { position: absolute; background-color: #1a73e8; z-index: 10; pointer-events: auto; touch-action: none; }
+.split-line.horizontal { width: 100%; height: 2px; cursor: row-resize; }
+.split-line.horizontal::after { content: ''; position: absolute; top: -10px; bottom: -10px; width: 100%; left: 0; }
+.split-line.vertical { height: 100%; width: 2px; cursor: col-resize; }
+.split-line.vertical::after { content: ''; position: absolute; left: -10px; right: -10px; height: 100%; top: 0; }
+.delete-btn-line { position: absolute; width: 28px; height: 28px; background: #d93025; color: white; border-radius: 50%; text-align: center; line-height: 26px; font-size: 16px; cursor: pointer; z-index: 12; display: none; box-shadow: 0 2px 4px rgba(0,0,0,0.2); border: 2px solid white; }
+.split-line:hover .delete-btn-line, .split-line:active .delete-btn-line { display: block; }
+#slice-result-grid { width: 100%; max-width: 1200px; display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 16px; margin-top: 20px; }
+.slice-card { background: #fff; border: 1px solid #eee; border-radius: 12px; overflow: hidden; transition: transform 0.2s; cursor: pointer; position: relative; }
+.slice-card:hover { transform: translateY(-4px); box-shadow: 0 6px 16px rgba(0,0,0,0.08); border-color: #d2e3fc; }
+.slice-img-result { width: 100%; aspect-ratio: 1; object-fit: contain; display: block; background: #f8f9fa; }
+.slice-info { padding: 8px; font-size: 11px; color: #5f6368; text-align: center; border-top: 1px solid #f0f0f0; background: #fff; }
+.download-hint { position: absolute; inset: 0; background: rgba(26, 115, 232, 0.05); display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.2s; pointer-events: none; }
+.slice-card:hover .download-hint { opacity: 1; }
+
+[data-theme="dark"] .slice-header-bar { background: var(--bg-secondary) !important; border-color: var(--border-color) !important; color: var(--text-main) !important; }
+[data-theme="dark"] .slicer-modal-content { background: var(--card-bg) !important; color: var(--text-main) !important; }
+[data-theme="dark"] .slicer-canvas-area { background: var(--input-bg) !important; border-color: var(--border-color) !important; }
+[data-theme="dark"] .slicer-controls { background: var(--card-bg) !important; border-color: var(--border-color) !important; }
+[data-theme="dark"] .slicer-preview-grid { background: var(--input-bg) !important; }
+[data-theme="dark"] .slicer-preview-item { background: var(--card-bg) !important; border-color: var(--border-color) !important; }
+[data-theme="dark"] .slice-title { color: var(--text-main) !important; }
+[data-theme="dark"] .slice-close-btn { color: var(--text-main) !important; background: var(--card-bg) !important; }
+[data-theme="dark"] .slice-close-btn:hover { background: var(--hover-color) !important; }

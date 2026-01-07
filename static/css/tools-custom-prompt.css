@@ -1,0 +1,114 @@
+/* 自定义提示词模态框暗黑模式 */
+[data-theme="dark"] #custom-prompt-modal {
+    background: var(--bg-color) !important;
+}
+
+[data-theme="dark"] #custom-prompt-modal .slice-header-bar {
+    background: var(--bg-secondary) !important;
+    border-color: var(--border-color) !important;
+}
+
+[data-theme="dark"] #custom-prompt-modal .slice-title {
+    color: var(--text-main) !important;
+}
+
+[data-theme="dark"] #custom-prompt-modal .slice-close {
+    color: var(--text-sub) !important;
+}
+
+[data-theme="dark"] #custom-prompt-modal .slice-close:hover {
+    background: var(--hover-color) !important;
+    color: var(--text-main) !important;
+}
+
+[data-theme="dark"] #custom-prompt-modal [style*="background: #fff"] {
+    background: var(--card-bg) !important;
+}
+
+[data-theme="dark"] #custom-prompt-modal [style*="border: 1px solid #e5e7eb"] {
+    border-color: var(--border-color) !important;
+}
+
+[data-theme="dark"] #custom-prompt-modal [style*="color: #333"] {
+    color: var(--text-main) !important;
+}
+
+[data-theme="dark"] #custom-prompt-modal [style*="color: #666"] {
+    color: var(--text-sub) !important;
+}
+
+[data-theme="dark"] #custom-prompt-modal [style*="color: #999"] {
+    color: var(--text-sub) !important;
+}
+
+[data-theme="dark"] #custom-prompt-modal [style*="color: #aaa"] {
+    color: var(--text-sub) !important;
+}
+
+[data-theme="dark"] #custom-prompt-modal .xhs-input,
+[data-theme="dark"] #custom-prompt-modal .xhs-textarea-lg {
+    background: var(--input-bg) !important;
+    border-color: var(--border-color) !important;
+    color: var(--text-main) !important;
+}
+
+[data-theme="dark"] #custom-prompt-modal .xhs-input::placeholder,
+[data-theme="dark"] #custom-prompt-modal .xhs-textarea-lg::placeholder {
+    color: var(--text-sub) !important;
+}
+
+[data-theme="dark"] #custom-prompt-modal .banana-search-input {
+    background: var(--input-bg) !important;
+    border-color: var(--border-color) !important;
+    color: var(--text-main) !important;
+}
+
+[data-theme="dark"] #custom-prompt-modal .banana-search-input::placeholder {
+    color: var(--text-sub) !important;
+}
+
+[data-theme="dark"] #custom-prompt-modal .banana-search-icon {
+    color: var(--text-sub) !important;
+}
+
+[data-theme="dark"] #custom-prompt-modal .banana-card {
+    background: var(--card-bg) !important;
+    border-color: var(--border-color) !important;
+}
+
+[data-theme="dark"] #custom-prompt-modal .banana-card:hover {
+    border-color: #a78bfa !important;
+}
+
+[data-theme="dark"] #custom-prompt-modal .banana-content {
+    background: var(--card-bg) !important;
+}
+
+[data-theme="dark"] #custom-prompt-modal .banana-title {
+    color: var(--text-main) !important;
+}
+
+[data-theme="dark"] #custom-prompt-modal .banana-prompt-text {
+    color: var(--text-sub) !important;
+}
+
+[data-theme="dark"] #custom-prompt-modal .banana-footer {
+    border-color: var(--border-color) !important;
+}
+
+[data-theme="dark"] #custom-prompt-modal .banana-author {
+    color: var(--text-sub) !important;
+}
+
+[data-theme="dark"] #custom-prompt-modal .banana-icon-btn {
+    color: var(--text-sub) !important;
+}
+
+[data-theme="dark"] #custom-prompt-modal .banana-icon-btn:hover {
+    background: var(--hover-color) !important;
+    color: var(--primary-color) !important;
+}
+
+[data-theme="dark"] #custom-prompt-modal #custom-prompt-empty {
+    color: var(--text-sub) !important;
+}

@@ -1,0 +1,126 @@
+/* === Banana Prompt 专用样式 === */
+.banana-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; width: 100%; margin-top: 20px;
+}
+.banana-card {
+    background: #fff; border: 1px solid #eee; border-radius: 12px; overflow: hidden;
+    display: flex; flex-direction: column; transition: all 0.3s ease;
+}
+.banana-card:hover {
+    transform: translateY(-4px); box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1); border-color: #fcd34d;
+}
+.banana-preview-box {
+    position: relative; aspect-ratio: 16/9; background: #f9fafb; overflow: hidden;
+}
+.banana-img {
+    width: 100%; height: 100%; object-fit: cover; transition: transform 0.5s;
+}
+.banana-card:hover .banana-img { transform: scale(1.05); }
+.banana-tags {
+    position: absolute; top: 8px; left: 8px; display: flex; gap: 4px;
+}
+.banana-tag {
+    background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); color: white;
+    font-size: 10px; padding: 2px 6px; border-radius: 4px;
+}
+.banana-tag.mode-generate { background: rgba(59, 130, 246, 0.8); text-transform: uppercase; font-weight: 700; }
+.banana-tag.mode-edit { background: rgba(168, 85, 247, 0.8); text-transform: uppercase; font-weight: 700; }
+
+.banana-content { padding: 16px; flex: 1; display: flex; flex-direction: column; }
+.banana-title { font-size: 15px; font-weight: 700; color: #111; margin-bottom: 8px; display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden;}
+.banana-prompt-box {
+    background: #f8fafc; border-radius: 6px; padding: 8px; margin-bottom: 12px;
+    flex: 1; cursor: pointer; position: relative; border: 1px solid transparent;
+}
+.banana-prompt-box:hover { border-color: #e2e8f0; background: #fff; }
+.banana-prompt-text {
+    font-size: 12px; color: #475569; font-family: monospace; line-height: 1.5;
+    display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+}
+.banana-prompt-tip {
+    position: absolute; inset: 0; background: rgba(0,0,0,0.02); display: flex;
+    align-items: center; justify-content: center; opacity: 0; transition: opacity 0.2s;
+}
+.banana-prompt-box:hover .banana-prompt-tip { opacity: 1; }
+.banana-prompt-tip span { background: #fff; padding: 4px 8px; border-radius: 4px; font-size: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+
+.banana-footer { display: flex; justify-content: space-between; align-items: center; margin-top: auto; pt-2; border-top: 1px solid #f1f5f9; padding-top: 8px;}
+.banana-author { font-size: 11px; color: #94a3b8; display: flex; align-items: center; gap: 4px; }
+.banana-actions { display: flex; gap: 8px; }
+.banana-icon-btn {
+    width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    color: #94a3b8; cursor: pointer; transition: all 0.2s;
+}
+.banana-icon-btn:hover { background: #f1f5f9; color: #333; }
+.banana-tabs { display: flex; gap: 10px; margin-bottom: 10px; justify-content: center; }
+.banana-tab { padding: 6px 16px; border-radius: 20px; font-size: 13px; cursor: pointer; background: #f1f3f4; color: #5f6368; font-weight: 500; transition: all 0.2s; }
+.banana-tab.active { background: #fef3c7; color: #b45309; border: 1px solid #fcd34d; }
+
+/* --- Banana 搜索框样式 --- */
+.banana-search-wrapper {
+    position: relative;
+    max-width: 500px;
+    margin: 0 auto 20px auto;
+    width: 100%;
+}
+.banana-search-input {
+    width: 100%;
+    padding: 12px 12px 12px 40px;
+    border: 1px solid #e5e7eb;
+    border-radius: 24px;
+    background: #f9fafb;
+    font-size: 14px;
+    outline: none;
+    transition: all 0.2s;
+}
+.banana-search-input:focus {
+    background: #fff;
+    border-color: #f59e0b;
+    box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.1);
+}
+.banana-search-icon {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #9ca3af;
+    pointer-events: none;
+}
+
+[data-theme="dark"] .banana-header { background: var(--bg-secondary) !important; border-color: var(--border-color) !important; }
+[data-theme="dark"] .banana-sidebar { background: var(--bg-secondary) !important; border-color: var(--border-color) !important; }
+[data-theme="dark"] .banana-main { background: var(--bg-color) !important; }
+[data-theme="dark"] .banana-prompt-card { border-color: var(--border-color) !important; color: var(--text-main) !important; }
+[data-theme="dark"] .banana-prompt-card:hover { border-color: var(--primary-color) !important; }
+[data-theme="dark"] .banana-category { color: var(--text-sub) !important; }
+[data-theme="dark"] .banana-title { color: var(--text-main) !important; }
+[data-theme="dark"] .banana-desc { color: var(--text-sub) !important; }
+[data-theme="dark"] .banana-search { background: var(--input-bg) !important; border-color: var(--border-color) !important; color: var(--text-main) !important; }
+[data-theme="dark"] .banana-filter-btn { background: var(--card-bg) !important; border-color: var(--border-color) !important; color: var(--text-main) !important; }
+[data-theme="dark"] .banana-filter-btn.active { background: var(--primary-color) !important; color: var(--bg-color) !important; border-color: var(--primary-color) !important; }
+[data-theme="dark"] .banana-prompt-box { background: var(--input-bg) !important; border-color: var(--border-color) !important; color: var(--text-main) !important; }
+[data-theme="dark"] .banana-prompt-box:hover { background: var(--hover-color) !important; border-color: var(--primary-color) !important; }
+[data-theme="dark"] .banana-prompt-text { color: var(--text-main) !important; }
+[data-theme="dark"] .banana-prompt-tip { color: var(--text-main) !important; }
+[data-theme="dark"] .banana-prompt-tip span { background: var(--primary-color) !important; color: var(--bg-color) !important; }
+[data-theme="dark"] .banana-preview-box { background: var(--input-bg) !important; border-color: var(--border-color) !important; }
+[data-theme="dark"] .banana-content { background: var(--card-bg) !important; color: var(--text-main) !important; }
+[data-theme="dark"] .banana-footer { background: var(--bg-secondary) !important; border-color: var(--border-color) !important; }
+[data-theme="dark"] .banana-author { color: var(--text-sub) !important; }
+[data-theme="dark"] .banana-icon-btn { color: var(--text-sub) !important; }
+[data-theme="dark"] .banana-icon-btn:hover { background: var(--hover-color) !important; color: var(--primary-color) !important; }
+[data-theme="dark"] .banana-tag { background: var(--input-bg) !important; color: var(--text-main) !important; border-color: var(--border-color) !important; }
+
+/* 香蕉提示词模态框 */
+[data-theme="dark"] #banana-modal { background: rgba(0, 0, 0, 0.85) !important; }
+[data-theme="dark"] #banana-modal .xhs-modal-content { background: var(--card-bg) !important; color: var(--text-main) !important; }
+[data-theme="dark"] #banana-modal .xhs-modal-header { background: var(--bg-secondary) !important; border-color: var(--border-color) !important; }
+[data-theme="dark"] #banana-modal .xhs-modal-title { color: var(--text-main) !important; }
+[data-theme="dark"] #banana-modal .xhs-modal-body { background: var(--bg-color) !important; color: var(--text-main) !important; }
+[data-theme="dark"] #banana-modal .banana-prompt-card { background: var(--card-bg) !important; border-color: var(--border-color) !important; color: var(--text-main) !important; }
+[data-theme="dark"] #banana-modal .banana-search { background: var(--input-bg) !important; border-color: var(--border-color) !important; color: var(--text-main) !important; }
+[data-theme="dark"] #banana-modal .banana-filter-btn { background: var(--card-bg) !important; border-color: var(--border-color) !important; color: var(--text-main) !important; }
+[data-theme="dark"] #banana-modal .banana-filter-btn.active { background: var(--primary-color) !important; color: var(--bg-color) !important; }
+[data-theme="dark"] #banana-modal .banana-category,
+[data-theme="dark"] #banana-modal .banana-desc { color: var(--text-sub) !important; }
+[data-theme="dark"] #banana-modal .banana-title { color: var(--text-main) !important; }

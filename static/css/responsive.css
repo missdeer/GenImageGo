@@ -1,0 +1,109 @@
+/* 响应式 */
+@media (max-width: 1024px) {
+    /* XHS侧栏遮罩 - 仅在小屏幕显示 */
+    .xhs-sidebar-overlay {
+        display: none !important;
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.5);
+        z-index: 99;
+        top: 60px;
+    }
+    .xhs-sidebar-overlay.active { display: block !important; }
+
+    .xhs-layout { flex-direction: column; overflow-y: auto; position: relative; }
+    .xhs-sidebar {
+        position: fixed;
+        left: 0;
+        top: 60px;
+        bottom: 0;
+        width: 280px;
+        z-index: 100;
+        transform: translateX(-100%);
+        transition: transform 0.3s ease;
+        box-shadow: 2px 0 8px rgba(0,0,0,0.15);
+    }
+    .xhs-sidebar:not(.collapsed) { transform: translateX(0); }
+    .xhs-middle { border-right: none; flex: none; min-height: auto; }
+    .xhs-middle-content { overflow-y: visible; }
+    .xhs-right { flex: none; min-height: 50vh; }
+    .shot-grid { 
+        grid-template-columns: 1fr;
+        padding: 16px;
+    }
+    .xhs-gallery-bar { flex-direction: column; align-items: flex-start; gap: 12px; padding: 16px; }
+    .xhs-gallery-opts { width: 100%; flex-wrap: wrap; gap: 12px; }
+    .xhs-select { flex: 1; min-width: 120px; }
+    .xhs-mini-btn { width: 100%; justify-content: center; }
+}
+
+@media (max-width: 768px) {
+    body { flex-direction: column; }
+    .mobile-header { display: flex; }
+    .desktop-header { display: none; }
+    .sidebar-nav { position: fixed; left: 0; top: 0; bottom: 0; transform: translateX(-100%); box-shadow: 5px 0 15px rgba(0,0,0,0.1); padding-top: 0; }
+    .sidebar-nav.open { transform: translateX(0); }
+    .settings-sidebar { position: fixed; right: 0; top: 0; bottom: 0; transform: translateX(100%); box-shadow: -5px 0 15px rgba(0,0,0,0.1); padding-top: 20px; }
+    .settings-sidebar.open { transform: translateX(0); }
+    .main-area { height: 100%; padding-top: var(--header-height); display: flex; flex-direction: column; }
+    .input-container-outer { padding: 0 16px; bottom: 20px; padding-bottom: env(safe-area-inset-bottom); }
+    .chat-container { padding: 20px 0 120px 0; }
+    .message-row { padding: 0 16px; }
+    .slice-toolbar { flex-direction: column; gap: 12px; align-items: stretch; }
+    .slice-btn-group { width: 100%; justify-content: center; }
+    .slice-action-btn { justify-content: center; }
+    #slice-result-grid { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .delete-btn-line { display: block; transform: scale(0.8); opacity: 0.8; }
+    .xhs-container { padding: 16px; padding-top: 70px; } 
+    .xhs-input-card { padding: 20px; }
+    .banana-grid { grid-template-columns: 1fr; }
+}
+
+/* 触摸反馈 - 移动设备 */
+@media (hover: none) and (pointer: coarse) {
+    /* 按钮类 */
+    .xhs-toggle-btn:active,
+    .xhs-mini-btn:active,
+    .xhs-action-btn:active,
+    .xhs-save-btn:active,
+    .action-pill:active,
+    .config-btn:active,
+    .new-chat-btn:active,
+    .icon-btn:active,
+    .send-btn:active,
+    .tool-btn:active,
+    .slice-action-btn:active,
+    .header-icon-btn:active {
+        opacity: 0.7;
+        transform: scale(0.98);
+        transition: all 0.1s ease;
+    }
+
+    /* 标签页和列表项 */
+    .banana-tab:active,
+    .xhs-history-item:active,
+    .session-item:active,
+    .provider-item:active,
+    .ratio-card:active,
+    .res-btn:active {
+        opacity: 0.8;
+        transform: scale(0.98);
+        transition: all 0.1s ease;
+    }
+
+    /* 卡片类 */
+    .shot-card:active,
+    .banana-card:active,
+    .slice-card:active {
+        opacity: 0.95;
+        transform: scale(0.99);
+        transition: all 0.1s ease;
+    }
+
+    /* 输入框和选择器 */
+    .xhs-select:active,
+    .xhs-input:active,
+    textarea:active {
+        opacity: 0.9;
+    }
+}

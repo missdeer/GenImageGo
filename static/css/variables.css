@@ -1,0 +1,42 @@
+:root {
+    --primary-color: #1a73e8;
+    --bg-color: #ffffff;
+    --bg-secondary: #f9f9fa;
+    --bg-tertiary: #f0f2f5;
+    --border-color: #e0e0e0;
+    --text-main: #202124;
+    --text-sub: #5f6368;
+    --hover-color: #f1f3f4;
+    --card-bg: #ffffff;
+    --input-bg: #f0f2f5;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.05);
+    --shadow-md: 0 2px 8px rgba(0,0,0,0.1);
+    --scrollbar-thumb: #dadce0;
+    --scrollbar-thumb-hover: #bdc1c6;
+    --sidebar-width: 280px;
+    --header-height: 60px;
+    --content-max-width: 860px;
+    --app-height: 100vh;
+    --xhs-color: #ff2e4d;
+    --banana-color: #f59e0b;
+}
+
+/* 暗黑模式 */
+[data-theme="dark"] {
+    --primary-color: #8ab4f8;
+    --bg-color: #1a1a1a;
+    --bg-secondary: #242424;
+    --bg-tertiary: #2d2d2d;
+    --border-color: #3c3c3c;
+    --text-main: #e8eaed;
+    --text-sub: #9aa0a6;
+    --hover-color: #2d2d2d;
+    --card-bg: #242424;
+    --input-bg: #2d2d2d;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.3);
+    --shadow-md: 0 2px 8px rgba(0,0,0,0.4);
+    --scrollbar-thumb: #5f6368;
+    --scrollbar-thumb-hover: #80868b;
+}
+
+@supports (height: 100dvh) { :root { --app-height: 100dvh; } }
