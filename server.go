@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/fs"
 	"log"
 	"net/http"
 	"net/url"
@@ -24,12 +25,12 @@ type Server struct {
 }
 
 type ServerConfig struct {
-	Model        string
-	BaseURL      string
-	APIKey       string
-	ModelSource  string
+	Model         string
+	BaseURL       string
+	APIKey        string
+	ModelSource   string
 	BaseURLSource string
-	APIKeySource string
+	APIKeySource  string
 }
 
 func NewServer(addr, staticDir string, config ServerConfig) *Server {
@@ -44,12 +45,13 @@ func NewServer(addr, staticDir string, config ServerConfig) *Server {
 }
 
 func (s *Server) Start() error {
-	if _, err := os.Stat(s.staticDir); os.IsNotExist(err) {
-		return fmt.Errorf("静态资源目录不存在: %s", s.staticDir)
+	staticSubFS, err := fs.Sub(staticFiles, "static")
+	if err != nil {
+		return fmt.Errorf("无法访问嵌入的静态资源: %w", err)
 	}
 
 	mux := http.NewServeMux()
-	fileServer := http.FileServer(http.Dir(s.staticDir))
+	fileServer := http.FileServer(http.FS(staticSubFS))
 	mux.HandleFunc("/generate-image", s.handleGenerateImage)
 	mux.Handle("/", fileServer)
 
@@ -68,7 +70,7 @@ func (s *Server) Start() error {
 	}()
 
 	fmt.Printf("服务器启动成功: http://%s\n", s.addr)
-	fmt.Printf("静态资源目录: %s\n", s.staticDir)
+	fmt.Println("静态资源: embedded")
 	fmt.Println("按 Ctrl+C 停止服务器")
 
 	if err := s.httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
