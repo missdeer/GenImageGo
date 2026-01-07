@@ -144,6 +144,7 @@ Upon seeing code, immediately make a three‑layer judgment:
 *   **Image-to-Image:** Supports using input images as reference for generation.
 *   **Format Handling:** Automatically handles image encoding (base64) and format conversion (e.g., BMP to PNG) for API compatibility.
 *   **Customization:** Offers options for aspect ratio and resolution (specific to Gemini/Vertex AI).
+*   **Web UI:** Optional web server mode with embedded static assets.
 
 ## Architecture
 
@@ -154,6 +155,7 @@ The project is structured as a standard Go application:
 *   **`gemini.go`:** Implements the `GeminiClient` for interacting with Google's Gemini and Vertex AI APIs. Handles request construction and response parsing.
 *   **`openai.go`:** Implements the `OpenAIClient` for interacting with OpenAI-compatible APIs. Handles chat completion requests and parsing image data from markdown responses.
 *   **`utils.go`:** Provides utility functions for file I/O, image encoding/decoding, and MIME type handling.
+*   **`embed.go`:** Embeds the `static/` assets into the binary using Go 1.16+ `embed`.
 
 # Building and Running
 
@@ -184,6 +186,14 @@ The tool can be run directly from the command line.
 ```bash
 ./genImage.exe --config config.json
 ```
+
+**Web Server Mode:**
+
+```bash
+go run . --serve --addr 127.0.0.1:8080
+```
+
+Open `http://127.0.0.1:8080` in a browser. Static assets are embedded at build time, so the `static/` directory is not required at runtime (the `--static` flag is ignored).
 
 **Specifying API Service and Model:**
 
