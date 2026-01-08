@@ -1,6 +1,6 @@
 # Codex Tool Usage
 
-The Codex MCP provides a `codex` tool for **debugging, complex problem solving, and code review**. Launch `codex exec --skip-git-repo-check --full-auto "$PROMPT"` command line directly to execute. Run in background. Timeout: 30m.
+The Codex Tool provides a `codex` tool for **debugging, complex problem solving, and code review**. Launch `codex exec --skip-git-repo-check --full-auto "$PROMPT"` command line directly to execute. Run in background. Timeout: 30m.
 
 ## Role
 
