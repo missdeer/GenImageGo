@@ -10,7 +10,8 @@ let UI = {};
             textarea: document.getElementById('user-input'),
             fileInput: document.getElementById('file-input'),
             previewArea: document.getElementById('preview-area'),
-            sendBtn: document.getElementById('send-btn')
+            sendBtn: document.getElementById('send-btn'),
+            enhanceBtn: document.getElementById('enhance-btn')
         };
 
         // Initialize Tools
@@ -163,6 +164,44 @@ let UI = {};
     }
 
     function useAsReference(base64){const mime="image/jpeg";const fullB64=base64.startsWith('data:')?base64:`data:${mime};base64,${base64}`;const rawBase64=fullB64.split(',')[1];state.images.push({base64:rawBase64,mimeType:mime,preview:base64ToBlobUrl(fullB64)});renderPreviews();checkInput();UI.textarea.focus();window.scrollTo(0,document.body.scrollHeight)}
+
+    async function enhancePrompt() {
+        if (!UI.textarea) return;
+        const text = UI.textarea.value.trim();
+        if (!text) {
+            showToast('请先输入提示词', 'error');
+            return;
+        }
+        if (UI.enhanceBtn) UI.enhanceBtn.classList.add('loading');
+        UI.textarea.disabled = true;
+        try {
+            console.log('enhancePrompt: sending request with text:', text);
+            const resp = await fetch('/enhance-prompt', {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain' },
+                body: text
+            });
+            console.log('enhancePrompt: response status:', resp.status, 'content-type:', resp.headers.get('content-type'));
+            if (!resp.ok) {
+                const errText = await resp.text();
+                console.log('enhancePrompt: error response:', errText);
+                throw new Error(errText || resp.statusText);
+            }
+            const result = await resp.text();
+            console.log('enhancePrompt: result text:', result);
+            UI.textarea.value = result;
+            adjustTextareaHeight();
+            checkInput();
+            showToast('提示词已优化', 'success');
+        } catch (e) {
+            console.error('enhancePrompt error:', e);
+            showToast('优化失败: ' + e.message, 'error');
+        } finally {
+            if (UI.enhanceBtn) UI.enhanceBtn.classList.remove('loading');
+            UI.textarea.disabled = false;
+            UI.textarea.focus();
+        }
+    }
 
     async function sendMessage(){
         if(!UI.textarea) return;
@@ -554,9 +593,9 @@ let UI = {};
     }
 
     function checkInput(){
-        if(!UI.sendBtn) return;
         const hasText=!!(UI.textarea&&UI.textarea.value.trim().length>0);
         const hasImages=state.images.length>0;
-        UI.sendBtn.classList.toggle('active',hasText||hasImages);
+        if(UI.sendBtn) UI.sendBtn.classList.toggle('active',hasText||hasImages);
+        if(UI.enhanceBtn) UI.enhanceBtn.classList.toggle('active',hasText);
     }
     async function handleFiles(files){if(state.images.length+files.length>14){alert("最多14张");return}for(let file of files){if(!file.type.startsWith('image/'))continue;state.images.push(await compressImage(file))}renderPreviews();checkInput();if(UI.fileInput)UI.fileInput.value=''}function renderPreviews(){if(UI.previewArea){UI.previewArea.innerHTML='';if(state.images.length>0){UI.previewArea.classList.add('has-images');state.images.forEach((img,i)=>{const div=document.createElement('div');div.className='preview-item';div.style.backgroundImage=`url(${img.preview})`;div.innerHTML=`<div class="preview-close" onclick="state.images.splice(${i},1);renderPreviews();checkInput()">×</div>`;UI.previewArea.appendChild(div)})}else UI.previewArea.classList.remove('has-images')}}

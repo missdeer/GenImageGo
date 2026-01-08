@@ -55,12 +55,19 @@ func (c *GeminiClient) Close() error {
 
 // GeminiRequest Gemini API 请求结构
 type GeminiRequest struct {
-	Contents         []GeminiContent         `json:"contents"`
-	GenerationConfig *GeminiGenerationConfig `json:"generationConfig,omitempty"`
+	SystemInstruction *GeminiSystemInstruction `json:"system_instruction,omitempty"`
+	Contents          []GeminiContent          `json:"contents"`
+	GenerationConfig  *GeminiGenerationConfig  `json:"generationConfig,omitempty"`
+}
+
+// GeminiSystemInstruction 系统指令
+type GeminiSystemInstruction struct {
+	Parts []GeminiPart `json:"parts"`
 }
 
 // GeminiContent 内容结构
 type GeminiContent struct {
+	Role  string       `json:"role,omitempty"`
 	Parts []GeminiPart `json:"parts"`
 }
 
@@ -78,9 +85,10 @@ type GeminiInlineData struct {
 
 // GeminiGenerationConfig 生成配置
 type GeminiGenerationConfig struct {
-	ResponseModalities []string           `json:"response_modalities,omitempty"`
-	ResponseMIMEType   string             `json:"response_mime_type,omitempty"`
-	ImageConfig        *GeminiImageConfig `json:"image_config,omitempty"`
+	ResponseModalities    []string           `json:"response_modalities,omitempty"`
+	ResponseMIMEType      string             `json:"response_mime_type,omitempty"`
+	ResponseMIMETypeCamel string             `json:"responseMimeType,omitempty"`
+	ImageConfig           *GeminiImageConfig `json:"image_config,omitempty"`
 }
 
 // GeminiImageConfig 图片生成配置

@@ -100,6 +100,10 @@ textarea {
 .icon-btn:hover { background: rgba(0,0,0,0.06); color: #202124; }
 .send-btn { color: var(--primary-color); opacity: 0.4; pointer-events: none; }
 .send-btn.active { opacity: 1; pointer-events: auto; }
+.enhance-btn { color: #fbbc05; opacity: 0.4; pointer-events: none; }
+.enhance-btn.active { opacity: 1; pointer-events: auto; }
+.enhance-btn.loading { opacity: 0.5; pointer-events: none; animation: pulse 1s infinite; }
+@keyframes pulse { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }
 
 [data-theme="dark"] .icon-btn { color: var(--text-sub) !important; }
 [data-theme="dark"] .icon-btn:hover { background: var(--hover-color) !important; color: var(--text-main) !important; }
