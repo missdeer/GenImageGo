@@ -56,7 +56,7 @@ let UI = {};
 
         // Textarea Events
         if (UI.textarea) {
-            UI.textarea.addEventListener('input', function() { adjustTextareaHeight(); checkInput(); });
+            UI.textarea.addEventListener('input', function() { checkInput(); adjustTextareaHeight(); });
             UI.textarea.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } });
             
             // Paste Support
@@ -116,6 +116,9 @@ let UI = {};
             document.querySelectorAll('.ratio-card').forEach(c => c.classList.remove('active'));
             card.classList.add('active'); state.aspectRatio = card.dataset.val;
         }));
+
+        adjustTextareaHeight();
+        checkInput();
     };
 
     function activateStickerMode(){createNewSession("表情包制作").then(()=>{
@@ -160,6 +163,143 @@ let UI = {};
     }
 
     function useAsReference(base64){const mime="image/jpeg";const fullB64=base64.startsWith('data:')?base64:`data:${mime};base64,${base64}`;const rawBase64=fullB64.split(',')[1];state.images.push({base64:rawBase64,mimeType:mime,preview:base64ToBlobUrl(fullB64)});renderPreviews();checkInput();UI.textarea.focus();window.scrollTo(0,document.body.scrollHeight)}
+
+    async function sendMessage(){
+        if(!UI.textarea) return;
+        const rawText=UI.textarea.value||'';
+        const text=rawText.trim();
+        const rawImages=Array.isArray(state.images)?state.images.slice():[];
+        const imagesBase64=rawImages.map(img=>{
+            if(typeof img==='string') return img.startsWith('data:')?img.split(',')[1]:img;
+            if(!img||typeof img!=='object') return null;
+            if(typeof img.base64==='string') return img.base64.startsWith('data:')?img.base64.split(',')[1]:img.base64;
+            return null;
+        }).filter(Boolean);
+
+        if(!text&&imagesBase64.length===0) return;
+
+        if(!currentSessionId) await createNewSession();
+        const sessionId=currentSessionId;
+
+        if(UI.emptyState&&UI.emptyState.parentElement===UI.chatHistory){
+            UI.emptyState.style.display='none';
+            UI.chatHistory.removeChild(UI.emptyState);
+        }
+
+        const displayText=text|| (imagesBase64.length>0?'图片':'');
+        const escapedText=escapeHtml(displayText).replace(/\n/g,'<br>');
+        const userHtml=`<div class="msg-content">${escapedText}</div>`;
+
+        let userMsgId=null;
+        try{
+            userMsgId=await saveMessage(sessionId,'user',text,imagesBase64,userHtml);
+        }catch(e){
+            console.error('Failed to save message:',e);
+        }
+
+        appendMessageToUI('user',userHtml,text,rawImages,userMsgId);
+
+        UI.textarea.value='';
+        state.images=[];
+        renderPreviews();
+        checkInput();
+        adjustTextareaHeight();
+
+        if(text){
+            try{
+                const sessions=await getAllSessions();
+                const currentSession=sessions.find(s=>s.id===sessionId);
+                if(currentSession&&currentSession.title==='新对话'){
+                    const title=text.length>20?text.slice(0,20)+'...':text;
+                    updateSessionTitle(sessionId,title);
+                    renderSessionList();
+                }
+            }catch(e){
+                console.error('Failed to update session title:',e);
+            }
+        }
+
+        activeGenerations.add(sessionId);
+        renderSessionList();
+
+        const progressId=`gen-progress-${sessionId}-${Date.now()}`;
+        const loadingHtml=SmartProgressBar.createHTML(progressId);
+        const loadingDiv=appendMessageToUI('bot',loadingHtml,null,[],null);
+        SmartProgressBar.start(progressId,state.resolution,imagesBase64.length>0);
+
+        processGeneration(text,imagesBase64,loadingDiv,sessionId,progressId);
+    }
+
+    function handleEdit(rawText, rawImages){
+        if(!UI.textarea) return;
+        UI.textarea.value=rawText||'';
+        state.images=[];
+        if(Array.isArray(rawImages)){
+            rawImages.forEach(img=>{
+                if(typeof img==='string'){
+                    const dataUrl=img.startsWith('data:')?img:`data:image/jpeg;base64,${img}`;
+                    const base64=dataUrl.split(',')[1]||'';
+                    if(base64) state.images.push({base64:base64,mimeType:'image/jpeg',preview:base64ToBlobUrl(dataUrl)});
+                    return;
+                }
+                if(img&&typeof img==='object'){
+                    const mimeType=img.mimeType||'image/jpeg';
+                    const base64=typeof img.base64==='string'?(img.base64.startsWith('data:')?img.base64.split(',')[1]:img.base64):'';
+                    const dataUrl=base64?`data:${mimeType};base64,${base64}`:'';
+                    const preview=img.preview|| (dataUrl?base64ToBlobUrl(dataUrl):'');
+                    if(base64&&preview) state.images.push({base64:base64,mimeType:mimeType,preview:preview});
+                }
+            });
+        }
+        renderPreviews();
+        checkInput();
+        adjustTextareaHeight();
+        UI.textarea.focus();
+        window.scrollTo(0,document.body.scrollHeight);
+    }
+
+    function handleRegenerate(rawText, rawImages){
+        handleEdit(rawText,rawImages);
+        setTimeout(()=>sendMessage(),0);
+    }
+
+    async function handleDeleteMessage(messageId){
+        if(!messageId) return;
+        if(!confirm('确定删除此消息？')) return;
+        try{
+            await deleteMessage(messageId);
+            const row=document.querySelector(`[data-message-id="${messageId}"]`);
+            if(row&&row.parentElement) row.parentElement.removeChild(row);
+            if(UI.chatHistory&&UI.chatHistory.querySelectorAll('.message-row').length===0){
+                if(UI.emptyState){
+                    UI.emptyState.style.display='flex';
+                    UI.chatHistory.appendChild(UI.emptyState);
+                }
+            }
+        }catch(e){
+            console.error('Failed to delete message:',e);
+            showToast('删除失败: '+e.message,'error');
+        }
+    }
+
+    async function urlToRef(url){
+        if(!url) return;
+        try{
+            const res=await nativeFetch(url);
+            if(!res.ok) throw new Error(`HTTP ${res.status}`);
+            const blob=await res.blob();
+            const dataUrl=await new Promise((resolve,reject)=>{
+                const reader=new FileReader();
+                reader.onload=()=>resolve(reader.result);
+                reader.onerror=()=>reject(new Error('Failed to read image'));
+                reader.readAsDataURL(blob);
+            });
+            useAsReference(String(dataUrl));
+        }catch(e){
+            console.error('Failed to load image URL:',e);
+            showToast('无法读取图片链接: '+e.message,'error');
+        }
+    }
     
     function appendMessageToUI(role, html, rawText = null, rawImages = [], messageId = null) {
         if(!UI.chatHistory) return null;
@@ -360,4 +500,63 @@ let UI = {};
         }
     }
 
-    function checkInput(){if(UI.textarea && (UI.textarea.value.trim().length>0||state.images.length>0))UI.sendBtn.classList.add('active');else if(UI.sendBtn) UI.sendBtn.classList.remove('active')}async function handleFiles(files){if(state.images.length+files.length>14){alert("最多14张");return}for(let file of files){if(!file.type.startsWith('image/'))continue;state.images.push(await compressImage(file))}renderPreviews();checkInput();if(UI.fileInput)UI.fileInput.value=''}function renderPreviews(){if(UI.previewArea){UI.previewArea.innerHTML='';if(state.images.length>0){UI.previewArea.classList.add('has-images');state.images.forEach((img,i)=>{const div=document.createElement('div');div.className='preview-item';div.style.backgroundImage=`url(${img.preview})`;div.innerHTML=`<div class="preview-close" onclick="state.images.splice(${i},1);renderPreviews();checkInput()">×</div>`;UI.previewArea.appendChild(div)})}else UI.previewArea.classList.remove('has-images')}}
+    function adjustTextareaHeight(){
+        if(!UI.textarea) return;
+        UI.textarea.style.height='auto';
+        const maxHeight=150;
+        UI.textarea.style.height=Math.min(UI.textarea.scrollHeight,maxHeight)+'px';
+    }
+
+    async function compressImage(file){
+        const dataUrl=await new Promise((resolve,reject)=>{
+            const reader=new FileReader();
+            reader.onload=()=>resolve(reader.result);
+            reader.onerror=()=>reject(new Error('Failed to read image'));
+            reader.readAsDataURL(file);
+        });
+        return new Promise(resolve=>{
+            const img=new Image();
+            img.onload=()=>{
+                const maxDim=2048;
+                let targetW=img.width;
+                let targetH=img.height;
+                const maxSide=Math.max(targetW,targetH);
+                if(maxSide>maxDim){
+                    const scale=maxDim/maxSide;
+                    targetW=Math.round(targetW*scale);
+                    targetH=Math.round(targetH*scale);
+                }
+                const canvas=document.createElement('canvas');
+                canvas.width=targetW;
+                canvas.height=targetH;
+                const ctx=canvas.getContext('2d');
+                if(!ctx){
+                    const base64=dataUrl.split(',')[1]||'';
+                    resolve({base64:base64,mimeType:file.type||'image/jpeg',preview:base64ToBlobUrl(dataUrl)});
+                    return;
+                }
+                ctx.drawImage(img,0,0,targetW,targetH);
+                let outUrl='';
+                try{
+                    outUrl=canvas.toDataURL('image/jpeg',0.85);
+                }catch(_){
+                    outUrl=dataUrl;
+                }
+                const base64=outUrl.split(',')[1]||'';
+                resolve({base64:base64,mimeType:'image/jpeg',preview:base64ToBlobUrl(outUrl)});
+            };
+            img.onerror=()=>{
+                const base64=dataUrl.split(',')[1]||'';
+                resolve({base64:base64,mimeType:file.type||'image/jpeg',preview:base64ToBlobUrl(dataUrl)});
+            };
+            img.src=dataUrl;
+        });
+    }
+
+    function checkInput(){
+        if(!UI.sendBtn) return;
+        const hasText=!!(UI.textarea&&UI.textarea.value.trim().length>0);
+        const hasImages=state.images.length>0;
+        UI.sendBtn.classList.toggle('active',hasText||hasImages);
+    }
+    async function handleFiles(files){if(state.images.length+files.length>14){alert("最多14张");return}for(let file of files){if(!file.type.startsWith('image/'))continue;state.images.push(await compressImage(file))}renderPreviews();checkInput();if(UI.fileInput)UI.fileInput.value=''}function renderPreviews(){if(UI.previewArea){UI.previewArea.innerHTML='';if(state.images.length>0){UI.previewArea.classList.add('has-images');state.images.forEach((img,i)=>{const div=document.createElement('div');div.className='preview-item';div.style.backgroundImage=`url(${img.preview})`;div.innerHTML=`<div class="preview-close" onclick="state.images.splice(${i},1);renderPreviews();checkInput()">×</div>`;UI.previewArea.appendChild(div)})}else UI.previewArea.classList.remove('has-images')}}
