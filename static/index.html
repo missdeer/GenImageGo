@@ -7,7 +7,7 @@
         content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Image Go</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-    
+
     <!-- Styles -->
     <link rel="stylesheet" href="css/variables.css">
     <link rel="stylesheet" href="css/base.css">
@@ -20,6 +20,36 @@
     <link rel="stylesheet" href="css/tools-custom-prompt.css">
     <link rel="stylesheet" href="css/tools-slicer.css">
     <link rel="stylesheet" href="css/responsive.css">
+
+    <!-- Browser Compatibility Check -->
+    <script>
+        (function () {
+            // Check if browser is Chromium-based
+            // Chromium browsers have window.chrome object (Chrome, Edge, Opera, etc.)
+            // We also check for the V8 engine via window.Intl.v8BreakIterator
+            var isChromium = !!window.chrome ||
+                (navigator.userAgent.indexOf('Chrome') > -1 && navigator.userAgent.indexOf('Safari') > -1) ||
+                (navigator.userAgent.indexOf('Edg') > -1);
+
+            // Exclude obvious non-Chromium browsers
+            var isFirefox = navigator.userAgent.indexOf('Firefox') > -1;
+            var isSafari = navigator.userAgent.indexOf('Safari') > -1 && navigator.userAgent.indexOf('Chrome') === -1;
+
+            if (!isChromium || isFirefox || isSafari) {
+                document.addEventListener('DOMContentLoaded', function () {
+                    // Check if user already dismissed the warning
+                    if (sessionStorage.getItem('browserWarningDismissed')) return;
+
+                    var banner = document.createElement('div');
+                    banner.className = 'browser-warning';
+                    banner.id = 'browser-warning';
+                    banner.innerHTML = '推荐使用 Chrome 或 Edge 浏览器，以获得更好的运行效果' +
+                        '<button class="browser-warning-close" onclick="this.parentElement.remove();sessionStorage.setItem(\'browserWarningDismissed\',\'1\')" aria-label="关闭">×</button>';
+                    document.body.insertBefore(banner, document.body.firstChild);
+                });
+            }
+        })();
+    </script>
 
 </head>
 
@@ -37,7 +67,7 @@
 
     <!-- Right Settings Sidebar -->
     <aside id="right-sidebar" class="settings-sidebar"></aside>
-    
+
     <!-- Modals & Overlays -->
     <div id="modals-container"></div>
     <div id="overlays-container"></div>
@@ -50,7 +80,7 @@
     <script src="js/tools/banana.js"></script>
     <script src="js/tools/custom-prompt.js"></script>
     <script src="js/tools/slicer.js"></script>
-    
+
     <!-- Main Logic -->
     <script src="js/main.js"></script>
     <!-- Loader -->
