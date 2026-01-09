@@ -89,7 +89,7 @@ func init() {
 	// 自定义用法
 	pflag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "用法: %s [选项] [图片文件...]\n\n", os.Args[0])
-		fmt.Fprintln(os.Stderr, "调用 OpenAI/Gemini/Vertex AI API 生成图片\n")
+		fmt.Fprintln(os.Stderr, "调用 OpenAI/Gemini/Vertex AI API 生成图片")
 		fmt.Fprintln(os.Stderr, "选项:")
 		pflag.PrintDefaults()
 		fmt.Fprintln(os.Stderr, "\n可用的模型:")
