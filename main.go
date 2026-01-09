@@ -29,6 +29,7 @@ var (
 	configFile  string
 	apiService  string
 	model       string
+	textModel   string
 	prompt      string
 	promptFile  string
 	baseURL     string
@@ -54,6 +55,7 @@ func init() {
 
 	// 模型
 	pflag.StringVarP(&model, "model", "m", "", "模型名称（默认: gemini-3-pro-image-preview）")
+	pflag.StringVar(&textModel, "text-model", "", "文本模型名称，用于提示词优化等（默认: gemini-3-flash-preview）")
 
 	// 提示词（互斥组）
 	pflag.StringVarP(&prompt, "prompt", "p", "", "图片生成的提示词")
@@ -116,11 +118,13 @@ func main() {
 	// Web 服务器模式
 	if serve {
 		modelValue, modelSource := getConfigValueWithSource(model, getConfigString(config, "model"), Defaults.Model)
+		textModelValue := getConfigValue(textModel, getConfigString(config, "text_model"), Defaults.TextModel)
 		baseURLValue, baseURLSource := getConfigValueWithSource(baseURL, getConfigString(config, "base_url"), Defaults.BaseURL)
 		apiKeyValue, apiKeySource := getConfigValueWithSource(apiKey, getConfigString(config, "api_key"), Defaults.APIKey)
 
 		server := NewServer(serverAddr, staticDir, ServerConfig{
 			Model:         modelValue,
+			TextModel:     textModelValue,
 			BaseURL:       baseURLValue,
 			APIKey:        apiKeyValue,
 			ModelSource:   modelSource,
@@ -318,6 +322,8 @@ func getConfigString(config *Config, key string) string {
 		return config.APIService
 	case "model":
 		return config.Model
+	case "text_model":
+		return config.TextModel
 	case "base_url":
 		return config.BaseURL
 	case "api_key":

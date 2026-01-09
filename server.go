@@ -30,6 +30,7 @@ type Server struct {
 
 type ServerConfig struct {
 	Model         string
+	TextModel     string
 	BaseURL       string
 	APIKey        string
 	ModelSource   string
@@ -132,7 +133,10 @@ func (s *Server) handleEnhancePrompt(w http.ResponseWriter, r *http.Request) {
 		baseURL = DefaultGeminiBaseURL
 	}
 
-	model := "gemini-3-pro-preview"
+	model := s.config.TextModel
+	if model == "" {
+		model = Defaults.TextModel
+	}
 	geminiReq := GeminiRequest{
 		SystemInstruction: &GeminiSystemInstruction{
 			Parts: []GeminiPart{{Text: systemPrompt}},
@@ -216,9 +220,17 @@ func (s *Server) handleEnhancePrompt(w http.ResponseWriter, r *http.Request) {
 
 	text := geminiResp.Candidates[0].Content.Parts[0].Text
 	log.Printf("enhance-prompt result text: %s", text)
-	if strings.HasPrefix("```json", text) && strings.HasSuffix("```", text) {
-		text = text[len("```json"):]
-		text = text[:len(text)-len("```")]
+	// Trim whitespace (spaces, newlines, carriage returns, tabs)
+	text = strings.TrimSpace(text)
+	// Remove markdown JSON code fences if present
+	if strings.HasPrefix(text, "```json") {
+		text = strings.TrimPrefix(text, "```json")
+		text = strings.TrimSuffix(text, "```")
+		text = strings.TrimSpace(text)
+	} else if strings.HasPrefix(text, "```") {
+		text = strings.TrimPrefix(text, "```")
+		text = strings.TrimSuffix(text, "```")
+		text = strings.TrimSpace(text)
 	}
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	_, _ = w.Write([]byte(text))

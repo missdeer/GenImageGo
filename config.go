@@ -33,6 +33,7 @@ func (s APIService) IsValid() bool {
 var Defaults = struct {
 	APIService  APIService
 	Model       string
+	TextModel   string
 	BaseURL     string
 	APIKey      string
 	Output      string
@@ -43,6 +44,7 @@ var Defaults = struct {
 }{
 	APIService:  APIServiceGemini,
 	Model:       "gemini-3-pro-image-preview",
+	TextModel:   "gemini-3-flash-preview",
 	BaseURL:     "http://192.168.233.166:8317",
 	APIKey:      "your-api-key-1",
 	Output:      "output.jpg",
@@ -56,6 +58,7 @@ var Defaults = struct {
 type Config struct {
 	APIService  string   `json:"api_service,omitempty"`
 	Model       string   `json:"model,omitempty"`
+	TextModel   string   `json:"text_model,omitempty"`
 	BaseURL     string   `json:"base_url,omitempty"`
 	APIKey      string   `json:"api_key,omitempty"`
 	Output      string   `json:"output,omitempty"`
