@@ -51,3 +51,32 @@ const leftSidebar=document.getElementById('left-sidebar');const rightSidebar=doc
 function toggleLeftSidebar(){leftSidebar.classList.toggle('open');overlay.classList.toggle('active');rightSidebar.classList.remove('open')}
 function toggleSettings(){rightSidebar.classList.toggle('open');overlay.classList.toggle('active');leftSidebar.classList.remove('open')}
 function closeAllSidebars(){leftSidebar.classList.remove('open');rightSidebar.classList.remove('open');overlay.classList.remove('active')}
+
+function toggleLeftSidebarDesktop(){
+    const isCollapsed = leftSidebar.classList.toggle('collapsed');
+    const btn = document.getElementById('left-sidebar-toggle');
+    if(btn) btn.classList.toggle('active', isCollapsed);
+    localStorage.setItem('left_sidebar_collapsed', isCollapsed);
+}
+
+function toggleRightSidebarDesktop(){
+    const isCollapsed = rightSidebar.classList.toggle('collapsed');
+    const btn = document.getElementById('right-sidebar-toggle');
+    if(btn) btn.classList.toggle('active', isCollapsed);
+    localStorage.setItem('right_sidebar_collapsed', isCollapsed);
+}
+
+function restoreSidebarState(){
+    if(localStorage.getItem('left_sidebar_collapsed') === 'true'){
+        leftSidebar.classList.add('collapsed');
+        const btn = document.getElementById('left-sidebar-toggle');
+        if(btn) btn.classList.add('active');
+    }
+    if(localStorage.getItem('right_sidebar_collapsed') === 'true'){
+        rightSidebar.classList.add('collapsed');
+        const btn = document.getElementById('right-sidebar-toggle');
+        if(btn) btn.classList.add('active');
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => setTimeout(restoreSidebarState, 100));

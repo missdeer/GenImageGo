@@ -140,6 +140,54 @@
 .session-item.generating .session-loading { display: inline-block; animation: spin 1s linear infinite; }
 
 [data-theme="dark"] .session-item { border-color: var(--border-color) !important; color: var(--text-main) !important; }
+
+/* 桌面端侧边栏折叠 */
+@media (min-width: 769px) {
+    .sidebar-nav {
+        transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1), width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .sidebar-nav.collapsed {
+        margin-left: calc(-1 * var(--sidebar-width));
+    }
+    .settings-sidebar {
+        transition: margin-right 0.3s cubic-bezier(0.4, 0, 0.2, 1), width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .settings-sidebar.collapsed {
+        margin-right: calc(-1 * var(--settings-width));
+    }
+}
+
+/* 侧边栏切换按钮 */
+.sidebar-toggle-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #5f6368;
+    transition: background 0.2s, color 0.2s;
+    flex-shrink: 0;
+}
+.sidebar-toggle-btn:hover {
+    background: #f1f3f4;
+    color: #202124;
+}
+.sidebar-toggle-btn svg {
+    transition: transform 0.3s;
+}
+.sidebar-toggle-btn.active svg {
+    transform: rotate(180deg);
+}
+
+[data-theme="dark"] .sidebar-toggle-btn {
+    color: var(--text-sub);
+}
+[data-theme="dark"] .sidebar-toggle-btn:hover {
+    background: var(--hover-color);
+    color: var(--text-main);
+}
 [data-theme="dark"] .session-item:hover { background: var(--hover-color) !important; }
 [data-theme="dark"] .session-item.active { background: var(--hover-color) !important; color: var(--primary-color) !important; border-color: var(--primary-color) !important; }
 [data-theme="dark"] .session-item.active::before { background: var(--primary-color) !important; }
