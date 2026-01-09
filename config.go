@@ -90,23 +90,6 @@ func LoadConfig(configPath string) (*Config, error) {
 	return &config, nil
 }
 
-// OpenAIConfig 表示 OpenAI 兼容 API 的配置
-type OpenAIConfig struct {
-	APIKey  string
-	BaseURL string
-	Model   string
-}
-
-// GeminiConfig 表示 Gemini API 的配置
-type GeminiConfig struct {
-	APIKey      string
-	BaseURL     string
-	Vertex      bool
-	Project     string
-	Location    string
-	Credentials string
-}
-
 // GetConfigValue 获取配置值，优先级：命令行参数 > 配置文件 > 默认值
 func GetConfigValue(cliValue, configValue, defaultValue string) string {
 	if cliValue != "" {

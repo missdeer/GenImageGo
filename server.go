@@ -20,6 +20,7 @@ type Server struct {
 }
 
 type ServerConfig struct {
+	APIService    string
 	Model         string
 	TextModel     string
 	BaseURL       string
@@ -33,6 +34,7 @@ func NewServer(addr, staticDir string, config ServerConfig) *Server {
 	enhancePromptText := embeddedEnhancePrompt
 
 	h := handler.New(handler.Config{
+		APIService:    config.APIService,
 		Model:         config.Model,
 		TextModel:     config.TextModel,
 		BaseURL:       config.BaseURL,
@@ -41,11 +43,11 @@ func NewServer(addr, staticDir string, config ServerConfig) *Server {
 		BaseURLSource: config.BaseURLSource,
 		APIKeySource:  config.APIKeySource,
 
+		DefaultAPIService: string(Defaults.APIService),
 		DefaultModel:      Defaults.Model,
 		DefaultTextModel:  Defaults.TextModel,
 		DefaultBaseURL:    Defaults.BaseURL,
 		DefaultAPIKey:     Defaults.APIKey,
-		DefaultGeminiURL:  DefaultGeminiBaseURL,
 		EnhancePromptText: enhancePromptText,
 	})
 

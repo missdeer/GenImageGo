@@ -6,6 +6,7 @@ import (
 )
 
 type Config struct {
+	APIService    string
 	Model         string
 	TextModel     string
 	BaseURL       string
@@ -14,11 +15,11 @@ type Config struct {
 	BaseURLSource string
 	APIKeySource  string
 
+	DefaultAPIService  string
 	DefaultModel       string
 	DefaultTextModel   string
 	DefaultBaseURL     string
 	DefaultAPIKey      string
-	DefaultGeminiURL   string
 	EnhancePromptText  string
 }
 

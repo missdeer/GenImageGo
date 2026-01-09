@@ -6,6 +6,9 @@ import (
 	"os"
 	"strings"
 
+	"genimage/service"
+	"genimage/util"
+
 	"github.com/spf13/pflag"
 )
 
@@ -117,12 +120,14 @@ func main() {
 
 	// Web 服务器模式
 	if serve {
+		apiSvcValue := getConfigValue(apiService, getConfigString(config, "api_service"), string(Defaults.APIService))
 		modelValue, modelSource := getConfigValueWithSource(model, getConfigString(config, "model"), Defaults.Model)
 		textModelValue := getConfigValue(textModel, getConfigString(config, "text_model"), Defaults.TextModel)
 		baseURLValue, baseURLSource := getConfigValueWithSource(baseURL, getConfigString(config, "base_url"), Defaults.BaseURL)
 		apiKeyValue, apiKeySource := getConfigValueWithSource(apiKey, getConfigString(config, "api_key"), Defaults.APIKey)
 
 		server := NewServer(serverAddr, staticDir, ServerConfig{
+			APIService:    apiSvcValue,
 			Model:         modelValue,
 			TextModel:     textModelValue,
 			BaseURL:       baseURLValue,
@@ -181,7 +186,7 @@ func main() {
 	}
 
 	// 验证 prompt_file 是否存在
-	if promptFileValue != "" && !FileExists(promptFileValue) {
+	if promptFileValue != "" && !util.FileExists(promptFileValue) {
 		fmt.Fprintf(os.Stderr, "错误: 提示词文件不存在: %s\n", promptFileValue)
 		os.Exit(1)
 	}
@@ -193,7 +198,7 @@ func main() {
 
 	// 验证所有输入图片文件是否存在
 	for _, imagePath := range images {
-		if !FileExists(imagePath) {
+		if !util.FileExists(imagePath) {
 			fmt.Fprintf(os.Stderr, "错误: 图片文件不存在: %s\n", imagePath)
 			os.Exit(1)
 		}
@@ -201,7 +206,7 @@ func main() {
 
 	// 验证输出目录是否存在
 	outputDir := getDir(outputValue)
-	if outputDir != "" && !DirExists(outputDir) {
+	if outputDir != "" && !util.DirExists(outputDir) {
 		fmt.Fprintf(os.Stderr, "错误: 输出目录不存在: %s\n", outputDir)
 		os.Exit(1)
 	}
@@ -235,7 +240,7 @@ func main() {
 
 	switch APIService(apiSvc) {
 	case APIServiceOpenAI:
-		client, clientErr := NewOpenAIClient(OpenAIConfig{
+		client, clientErr := service.NewOpenAIClient(service.OpenAIConfig{
 			APIKey:  apiKeyValue,
 			BaseURL: baseURLValue,
 			Model:   modelName,
@@ -247,7 +252,7 @@ func main() {
 		imageBytes, textResponse, err = client.GenerateImageViaChat(modelName, promptText, images)
 
 	case APIServiceGemini, APIServiceVertexAI:
-		client, clientErr := NewGeminiClient(ctx, GeminiConfig{
+		client, clientErr := service.NewGeminiClient(ctx, service.GeminiConfig{
 			APIKey:      apiKeyValue,
 			BaseURL:     baseURLValue,
 			Vertex:      APIService(apiSvc) == APIServiceVertexAI,
@@ -283,7 +288,7 @@ func main() {
 	}
 
 	// 保存图片
-	if err := SaveImageBytes(imageBytes, outputValue); err != nil {
+	if err := util.SaveImageBytes(imageBytes, outputValue); err != nil {
 		fmt.Fprintf(os.Stderr, "错误: 保存图片失败: %v\n", err)
 		os.Exit(1)
 	}

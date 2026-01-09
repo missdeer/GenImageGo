@@ -1,4 +1,4 @@
-package main
+package service
 
 import (
 	"bytes"
@@ -10,9 +10,18 @@ import (
 	"regexp"
 	"strings"
 	"time"
+
+	"genimage/util"
 )
 
 const DefaultOpenAIBaseURL = "https://api.openai.com/v1"
+
+// OpenAIConfig 表示 OpenAI 兼容 API 的配置
+type OpenAIConfig struct {
+	APIKey  string
+	BaseURL string
+	Model   string
+}
 
 // OpenAIClient OpenAI 兼容 API 客户端
 type OpenAIClient struct {
@@ -102,7 +111,7 @@ func (c *OpenAIClient) GenerateImageViaChat(model, prompt string, referenceImage
 
 	// 添加参考图片
 	for _, imagePath := range referenceImages {
-		b64, mimeType, err := EncodeImageForAPI(imagePath)
+		b64, mimeType, err := util.EncodeImageForAPI(imagePath)
 		if err != nil {
 			fmt.Printf("警告: 无法读取参考图片 %s: %v\n", imagePath, err)
 			continue

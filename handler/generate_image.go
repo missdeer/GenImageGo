@@ -60,10 +60,6 @@ func handleGenerateImage(h *Handler, w http.ResponseWriter, r *http.Request) {
 		baseURLSource = "default"
 		baseURL = h.config.DefaultBaseURL
 	}
-	if baseURL == "" {
-		baseURLSource = "builtin"
-		baseURL = h.config.DefaultGeminiURL
-	}
 	log.Printf("generate-image upstream model=%s (source=%s) baseURL=%s (source=%s) apiKeySource=%s keyLen=%d", model, modelSource, baseURL, baseURLSource, apiKeySource, len(apiKey))
 	apiURL := fmt.Sprintf("%s/v1beta/models/%s:generateContent?key=%s",
 		strings.TrimSuffix(baseURL, "/"),

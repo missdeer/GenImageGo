@@ -1,4 +1,4 @@
-package main
+package service
 
 import (
 	"bytes"
@@ -11,12 +11,24 @@ import (
 	"os"
 	"strings"
 	"time"
+
+	"genimage/util"
 )
 
 const (
 	DefaultGeminiBaseURL = "https://generativelanguage.googleapis.com"
 	DefaultLocation      = "us-central1"
 )
+
+// GeminiConfig 表示 Gemini API 的配置
+type GeminiConfig struct {
+	APIKey      string
+	BaseURL     string
+	Vertex      bool
+	Project     string
+	Location    string
+	Credentials string
+}
 
 // GeminiClient Gemini API 客户端
 type GeminiClient struct {
@@ -29,7 +41,7 @@ func NewGeminiClient(ctx context.Context, config GeminiConfig) (*GeminiClient, e
 	if config.Vertex {
 		// Vertex AI 模式需要凭证
 		if config.Credentials != "" {
-			if !FileExists(config.Credentials) {
+			if !util.FileExists(config.Credentials) {
 				return nil, fmt.Errorf("credentials file not found: %s", config.Credentials)
 			}
 		}
@@ -144,7 +156,7 @@ func (c *GeminiClient) GenerateImageViaChat(ctx context.Context, model, prompt s
 
 	// 添加参考图片
 	for _, imagePath := range referenceImages {
-		if !FileExists(imagePath) {
+		if !util.FileExists(imagePath) {
 			fmt.Printf("警告: 参考图片不存在: %s\n", imagePath)
 			continue
 		}
@@ -155,7 +167,7 @@ func (c *GeminiClient) GenerateImageViaChat(ctx context.Context, model, prompt s
 			continue
 		}
 
-		mimeType := GetMIMEType(imagePath)
+		mimeType := util.GetMIMEType(imagePath)
 		b64Data := base64.StdEncoding.EncodeToString(imgData)
 
 		parts = append(parts, GeminiPart{

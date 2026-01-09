@@ -44,18 +44,40 @@ func handleEnhancePrompt(h *Handler, w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "missing API key", http.StatusBadRequest)
 		return
 	}
-	baseURL := h.config.BaseURL
-	if baseURL == "" {
-		baseURL = h.config.DefaultBaseURL
-	}
-	if baseURL == "" {
-		baseURL = h.config.DefaultGeminiURL
-	}
 
 	model := h.config.TextModel
 	if model == "" {
 		model = h.config.DefaultTextModel
 	}
+
+	apiService := h.config.APIService
+	if apiService == "" {
+		apiService = h.config.DefaultAPIService
+	}
+
+	var text string
+	switch apiService {
+	case "openai":
+		text, err = h.enhancePromptViaOpenAI(r, reqPrompt, systemPrompt, model, apiKey, start)
+	default:
+		text, err = h.enhancePromptViaGemini(r, reqPrompt, systemPrompt, model, apiKey, start)
+	}
+
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadGateway)
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	_, _ = w.Write([]byte(text))
+}
+
+func (h *Handler) enhancePromptViaGemini(r *http.Request, reqPrompt, systemPrompt, model, apiKey string, start time.Time) (string, error) {
+	baseURL := h.config.BaseURL
+	if baseURL == "" {
+		baseURL = h.config.DefaultBaseURL
+	}
+
 	geminiReq := geminiRequest{
 		SystemInstruction: &geminiSystemInstruction{
 			Parts: []geminiPart{{Text: systemPrompt}},
@@ -74,8 +96,7 @@ func handleEnhancePrompt(h *Handler, w http.ResponseWriter, r *http.Request) {
 	reqBody, err := json.Marshal(geminiReq)
 	if err != nil {
 		log.Printf("enhance-prompt failed to marshal request: %v", err)
-		http.Error(w, "internal error", http.StatusInternalServerError)
-		return
+		return "", err
 	}
 
 	apiURL := fmt.Sprintf("%s/v1beta/models/%s:generateContent?key=%s",
@@ -86,16 +107,14 @@ func handleEnhancePrompt(h *Handler, w http.ResponseWriter, r *http.Request) {
 
 	upstreamReq, err := http.NewRequestWithContext(r.Context(), http.MethodPost, apiURL, bytes.NewReader(reqBody))
 	if err != nil {
-		http.Error(w, "failed to create upstream request", http.StatusBadGateway)
-		return
+		return "", err
 	}
 	upstreamReq.Header.Set("Content-Type", "application/json")
 
 	resp, err := h.httpClient.Do(upstreamReq)
 	if err != nil {
 		log.Printf("enhance-prompt upstream error: %v", err)
-		http.Error(w, "upstream request failed", http.StatusBadGateway)
-		return
+		return "", err
 	}
 	defer resp.Body.Close()
 	log.Printf("enhance-prompt upstream status=%d duration=%s", resp.StatusCode, time.Since(start))
@@ -103,45 +122,107 @@ func handleEnhancePrompt(h *Handler, w http.ResponseWriter, r *http.Request) {
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
 		log.Printf("enhance-prompt failed to read response: %v", err)
-		http.Error(w, "failed to read upstream response", http.StatusBadGateway)
-		return
+		return "", err
 	}
 
 	if resp.StatusCode != http.StatusOK {
 		log.Printf("enhance-prompt upstream error response: %s", string(respBody))
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(resp.StatusCode)
-		_, _ = w.Write(respBody)
-		return
+		return "", fmt.Errorf("upstream error: %s", string(respBody))
 	}
 
 	var geminiResp geminiResponse
 	if err := json.Unmarshal(respBody, &geminiResp); err != nil {
 		log.Printf("enhance-prompt failed to parse response: %v", err)
-		http.Error(w, "failed to parse upstream response", http.StatusBadGateway)
-		return
+		return "", err
 	}
 
 	if geminiResp.Error != nil {
 		log.Printf("enhance-prompt API error: %s", geminiResp.Error.Message)
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadGateway)
-		_, _ = w.Write(respBody)
-		return
+		return "", fmt.Errorf("API error: %s", geminiResp.Error.Message)
 	}
 
 	if len(geminiResp.Candidates) == 0 || geminiResp.Candidates[0].Content == nil ||
 		len(geminiResp.Candidates[0].Content.Parts) == 0 {
 		log.Printf("enhance-prompt empty response from API")
-		http.Error(w, "empty response from API", http.StatusBadGateway)
-		return
+		return "", fmt.Errorf("empty response from API")
 	}
 
 	text := geminiResp.Candidates[0].Content.Parts[0].Text
 	log.Printf("enhance-prompt result text: %s", text)
-	// Trim whitespace (spaces, newlines, carriage returns, tabs)
+	return cleanResponseText(text), nil
+}
+
+func (h *Handler) enhancePromptViaOpenAI(r *http.Request, reqPrompt, systemPrompt, model, apiKey string, start time.Time) (string, error) {
+	baseURL := h.config.BaseURL
+	if baseURL == "" {
+		baseURL = h.config.DefaultBaseURL
+	}
+
+	openaiReq := openaiChatRequest{
+		Model: model,
+		Messages: []openaiChatMessage{
+			{Role: "system", Content: systemPrompt},
+			{Role: "user", Content: reqPrompt},
+		},
+	}
+
+	reqBody, err := json.Marshal(openaiReq)
+	if err != nil {
+		log.Printf("enhance-prompt failed to marshal request: %v", err)
+		return "", err
+	}
+
+	apiURL := fmt.Sprintf("%s/chat/completions", strings.TrimSuffix(baseURL, "/"))
+
+	upstreamReq, err := http.NewRequestWithContext(r.Context(), http.MethodPost, apiURL, bytes.NewReader(reqBody))
+	if err != nil {
+		return "", err
+	}
+	upstreamReq.Header.Set("Content-Type", "application/json")
+	upstreamReq.Header.Set("Authorization", "Bearer "+apiKey)
+
+	resp, err := h.httpClient.Do(upstreamReq)
+	if err != nil {
+		log.Printf("enhance-prompt upstream error: %v", err)
+		return "", err
+	}
+	defer resp.Body.Close()
+	log.Printf("enhance-prompt upstream status=%d duration=%s", resp.StatusCode, time.Since(start))
+
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		log.Printf("enhance-prompt failed to read response: %v", err)
+		return "", err
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		log.Printf("enhance-prompt upstream error response: %s", string(respBody))
+		return "", fmt.Errorf("upstream error: %s", string(respBody))
+	}
+
+	var openaiResp openaiChatResponse
+	if err := json.Unmarshal(respBody, &openaiResp); err != nil {
+		log.Printf("enhance-prompt failed to parse response: %v", err)
+		return "", err
+	}
+
+	if openaiResp.Error != nil {
+		log.Printf("enhance-prompt API error: %s", openaiResp.Error.Message)
+		return "", fmt.Errorf("API error: %s", openaiResp.Error.Message)
+	}
+
+	if len(openaiResp.Choices) == 0 {
+		log.Printf("enhance-prompt empty response from API")
+		return "", fmt.Errorf("empty response from API")
+	}
+
+	text := openaiResp.Choices[0].Message.Content
+	log.Printf("enhance-prompt result text: %s", text)
+	return cleanResponseText(text), nil
+}
+
+func cleanResponseText(text string) string {
 	text = strings.TrimSpace(text)
-	// Remove markdown JSON code fences if present
 	if strings.HasPrefix(text, "```json") {
 		text = strings.TrimPrefix(text, "```json")
 		text = strings.TrimSuffix(text, "```")
@@ -151,6 +232,5 @@ func handleEnhancePrompt(h *Handler, w http.ResponseWriter, r *http.Request) {
 		text = strings.TrimSuffix(text, "```")
 		text = strings.TrimSpace(text)
 	}
-	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-	_, _ = w.Write([]byte(text))
+	return text
 }
