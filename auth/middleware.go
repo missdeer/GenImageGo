@@ -82,11 +82,19 @@ func GetUserFromContext(ctx context.Context) *model.User {
 }
 
 func SetSessionCookie(w http.ResponseWriter, token string) {
+	SetSessionCookieWithExpiry(w, token, true)
+}
+
+func SetSessionCookieWithExpiry(w http.ResponseWriter, token string, rememberMe bool) {
+	maxAge := 0
+	if rememberMe {
+		maxAge = 7 * 24 * 60 * 60
+	}
 	http.SetCookie(w, &http.Cookie{
 		Name:     SessionCookieName,
 		Value:    token,
 		Path:     "/",
-		MaxAge:   7 * 24 * 60 * 60,
+		MaxAge:   maxAge,
 		HttpOnly: true,
 		SameSite: http.SameSiteLaxMode,
 	})

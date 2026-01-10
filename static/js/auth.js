@@ -36,7 +36,7 @@ function validatePasswordComplexity(password) {
     return hasUpper && hasLower && hasDigit;
 }
 
-async function handleLogin(email, password) {
+async function handleLogin(email, password, rememberMe = false) {
     hideError();
     setLoading(true);
 
@@ -44,7 +44,7 @@ async function handleLogin(email, password) {
         const resp = await fetch('/api/auth/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, password })
+            body: JSON.stringify({ email, password, remember_me: rememberMe })
         });
 
         const data = await resp.json();

@@ -29,6 +29,12 @@
                     <label for="password">密码</label>
                     <input type="password" id="password" name="password" required autocomplete="current-password" placeholder="请输入密码">
                 </div>
+                <div class="form-group-inline">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="remember-me" name="remember-me">
+                        <span>7天内免登录</span>
+                    </label>
+                </div>
                 <div id="error-message" class="error-message"></div>
                 <button type="submit" class="auth-button" id="submit-btn">
                     <span class="btn-text">登录</span>
@@ -55,7 +61,8 @@
             e.preventDefault();
             const email = document.getElementById('email').value.trim();
             const password = document.getElementById('password').value;
-            await handleLogin(email, password);
+            const rememberMe = document.getElementById('remember-me').checked;
+            await handleLogin(email, password, rememberMe);
         });
     </script>
 </body>

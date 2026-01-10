@@ -29,8 +29,9 @@ type registerRequest struct {
 }
 
 type loginRequest struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
+	Email      string `json:"email"`
+	Password   string `json:"password"`
+	RememberMe bool   `json:"remember_me"`
 }
 
 type forgotPasswordRequest struct {
@@ -98,7 +99,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	auth.SetSessionCookie(w, session.Token)
+	auth.SetSessionCookieWithExpiry(w, session.Token, req.RememberMe)
 	writeJSON(w, http.StatusOK, userResponse{
 		ID:    user.ID,
 		Email: user.Email,
