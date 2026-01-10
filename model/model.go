@@ -5,6 +5,8 @@ import (
 	"time"
 
 	"github.com/glebarez/sqlite"
+	"gorm.io/driver/mysql"
+	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
 
@@ -25,8 +27,27 @@ type Session struct {
 	ExpiresAt time.Time `gorm:"index;not null" json:"-"`
 }
 
-func InitDB(dbPath string) (*gorm.DB, error) {
-	db, err := gorm.Open(sqlite.Open(dbPath), &gorm.Config{})
+func InitDB(dbType, dsn string) (*gorm.DB, error) {
+	var dialector gorm.Dialector
+
+	switch dbType {
+	case "sqlite":
+		dialector = sqlite.Open(dsn)
+	case "mysql":
+		if dsn == "" {
+			return nil, fmt.Errorf("MySQL 需要指定连接字符串 (--db-dsn)")
+		}
+		dialector = mysql.Open(dsn)
+	case "postgres":
+		if dsn == "" {
+			return nil, fmt.Errorf("PostgreSQL 需要指定连接字符串 (--db-dsn)")
+		}
+		dialector = postgres.Open(dsn)
+	default:
+		return nil, fmt.Errorf("不支持的数据库类型: %s", dbType)
+	}
+
+	db, err := gorm.Open(dialector, &gorm.Config{})
 	if err != nil {
 		return nil, fmt.Errorf("无法连接数据库: %w", err)
 	}

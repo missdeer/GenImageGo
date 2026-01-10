@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 )
 
 // APIService 表示 API 服务类型
@@ -29,6 +30,44 @@ func (s APIService) IsValid() bool {
 	return false
 }
 
+// DBType 表示数据库类型
+type DBType string
+
+const (
+	DBTypeSQLite   DBType = "sqlite"
+	DBTypeMySQL    DBType = "mysql"
+	DBTypePostgres DBType = "postgres"
+)
+
+// ValidDBTypes 返回所有有效的数据库类型
+func ValidDBTypes() []DBType {
+	return []DBType{DBTypeSQLite, DBTypeMySQL, DBTypePostgres}
+}
+
+// IsValid 检查数据库类型是否有效
+func (t DBType) IsValid() bool {
+	switch t {
+	case DBTypeSQLite, DBTypeMySQL, DBTypePostgres:
+		return true
+	}
+	return false
+}
+
+// ParseDBType 解析数据库类型字符串
+func ParseDBType(s string) (DBType, error) {
+	normalized := strings.ToLower(strings.TrimSpace(s))
+	switch normalized {
+	case "sqlite":
+		return DBTypeSQLite, nil
+	case "mysql":
+		return DBTypeMySQL, nil
+	case "postgres", "postgresql":
+		return DBTypePostgres, nil
+	default:
+		return "", fmt.Errorf("不支持的数据库类型: %s", s)
+	}
+}
+
 // Defaults 默认配置值
 var Defaults = struct {
 	APIService  APIService
@@ -41,6 +80,8 @@ var Defaults = struct {
 	AspectRatio string
 	Resolution  string
 	Prompt      string
+	DBType      string
+	DBDSN       string
 }{
 	APIService:  APIServiceGemini,
 	Model:       "gemini-3-pro-image-preview",
@@ -52,6 +93,8 @@ var Defaults = struct {
 	AspectRatio: "3:4",
 	Resolution:  "4K",
 	Prompt:      "美丽的中国少女穿着浅色碎花短裙在小溪里玩水，头戴遮阳帽，小溪旁巨大的树荫挡住了阳光",
+	DBType:      "sqlite",
+	DBDSN:       "genimage.db",
 }
 
 // Config 表示从 JSON 文件加载的配置
@@ -70,6 +113,8 @@ type Config struct {
 	AspectRatio string   `json:"aspect_ratio,omitempty"`
 	Resolution  string   `json:"resolution,omitempty"`
 	Images      []string `json:"images,omitempty"`
+	DBType      string   `json:"db_type,omitempty"`
+	DBDSN       string   `json:"db_dsn,omitempty"`
 }
 
 // LoadConfig 从 JSON 文件加载配置

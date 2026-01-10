@@ -48,6 +48,8 @@ var (
 	serve       bool
 	serverAddr  string
 	staticDir   string
+	dbType      string
+	dbDSN       string
 )
 
 func init() {
@@ -87,6 +89,10 @@ func init() {
 	pflag.StringVar(&serverAddr, "addr", "127.0.0.1:8080", "服务器监听地址")
 	pflag.StringVar(&staticDir, "static", "static", "静态资源目录")
 
+	// 数据库配置
+	pflag.StringVar(&dbType, "db-type", "", "数据库类型（默认: sqlite）\n可选值: sqlite, mysql, postgres")
+	pflag.StringVar(&dbDSN, "db-dsn", "", "数据库连接字符串（默认: genimage.db）")
+
 	// 自定义用法
 	pflag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "用法: %s [选项] [图片文件...]\n\n", os.Args[0])
@@ -121,7 +127,16 @@ func main() {
 
 	// Web 服务器模式
 	if serve {
-		db, err := dbmodel.InitDB("genimage.db")
+		dbTypeValue := getConfigValue(dbType, getConfigString(config, "db_type"), Defaults.DBType)
+		dbDSNValue := getConfigValue(dbDSN, getConfigString(config, "db_dsn"), Defaults.DBDSN)
+
+		parsedDBType, err := ParseDBType(dbTypeValue)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "错误: %v\n", err)
+			os.Exit(1)
+		}
+
+		db, err := dbmodel.InitDB(string(parsedDBType), dbDSNValue)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "错误: %v\n", err)
 			os.Exit(1)
@@ -356,6 +371,10 @@ func getConfigString(config *Config, key string) string {
 		return config.AspectRatio
 	case "resolution":
 		return config.Resolution
+	case "db_type":
+		return config.DBType
+	case "db_dsn":
+		return config.DBDSN
 	default:
 		return ""
 	}

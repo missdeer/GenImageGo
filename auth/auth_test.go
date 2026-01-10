@@ -9,7 +9,7 @@ import (
 
 func setupTestDB(t *testing.T) *model.User {
 	t.Helper()
-	db, err := model.InitDB(":memory:")
+	db, err := model.InitDB("sqlite", ":memory:")
 	if err != nil {
 		t.Fatalf("failed to init test db: %v", err)
 	}
@@ -31,7 +31,7 @@ func TestMain(m *testing.M) {
 }
 
 func TestRegister(t *testing.T) {
-	db, err := model.InitDB(":memory:")
+	db, err := model.InitDB("sqlite", ":memory:")
 	if err != nil {
 		t.Fatalf("failed to init db: %v", err)
 	}
@@ -43,10 +43,10 @@ func TestRegister(t *testing.T) {
 	svc := NewService(db)
 
 	tests := []struct {
-		name    string
-		email   string
+		name     string
+		email    string
 		password string
-		wantErr error
+		wantErr  error
 	}{
 		{"valid", "valid@example.com", "Password123", nil},
 		{"invalid email format", "notanemail", "Password123", ErrEmailInvalid},
@@ -67,7 +67,7 @@ func TestRegister(t *testing.T) {
 }
 
 func TestRegisterDuplicate(t *testing.T) {
-	db, err := model.InitDB(":memory:")
+	db, err := model.InitDB("sqlite", ":memory:")
 	if err != nil {
 		t.Fatalf("failed to init db: %v", err)
 	}
@@ -90,7 +90,7 @@ func TestRegisterDuplicate(t *testing.T) {
 }
 
 func TestLogin(t *testing.T) {
-	db, err := model.InitDB(":memory:")
+	db, err := model.InitDB("sqlite", ":memory:")
 	if err != nil {
 		t.Fatalf("failed to init db: %v", err)
 	}
@@ -107,10 +107,10 @@ func TestLogin(t *testing.T) {
 	}
 
 	tests := []struct {
-		name    string
-		email   string
+		name     string
+		email    string
 		password string
-		wantErr error
+		wantErr  error
 	}{
 		{"valid login", "test@example.com", "Password123", nil},
 		{"wrong password", "test@example.com", "WrongPass123", ErrInvalidCredentials},
@@ -128,7 +128,7 @@ func TestLogin(t *testing.T) {
 }
 
 func TestSessionValidation(t *testing.T) {
-	db, err := model.InitDB(":memory:")
+	db, err := model.InitDB("sqlite", ":memory:")
 	if err != nil {
 		t.Fatalf("failed to init db: %v", err)
 	}
@@ -159,7 +159,7 @@ func TestSessionValidation(t *testing.T) {
 }
 
 func TestLogout(t *testing.T) {
-	db, err := model.InitDB(":memory:")
+	db, err := model.InitDB("sqlite", ":memory:")
 	if err != nil {
 		t.Fatalf("failed to init db: %v", err)
 	}
