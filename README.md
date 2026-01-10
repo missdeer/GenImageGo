@@ -76,3 +76,12 @@ To enable the "Forgot Password" feature, configure SMTP settings in your `config
 | `password` | SMTP authentication password |
 | `from` | Sender email address (optional, defaults to username) |
 | `base_web_url` | Base URL for password reset links (optional, defaults to server address) |
+
+## License
+
+This software is available under a dual licensing model:
+
+- **Open Source (GPL v3):** For non-commercial, personal, educational, or open source projects.
+- **Commercial License:** Required for workplace or commercial use.
+
+See the [LICENSE](LICENSE) file for full details.
