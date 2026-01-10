@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>注册 - Image Go</title>
+    <link rel="stylesheet" href="css/variables.css">
+    <link rel="stylesheet" href="css/auth.css">
+    <script>
+        (function() {
+            const theme = localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-theme', theme);
+        })();
+    </script>
+</head>
+<body>
+    <div class="auth-container">
+        <div class="auth-card">
+            <div class="auth-header">
+                <h1>Image Go</h1>
+                <p>创建新账号</p>
+            </div>
+            <form id="register-form" class="auth-form">
+                <div class="form-group">
+                    <label for="email">邮箱</label>
+                    <input type="email" id="email" name="email" required autocomplete="email" placeholder="请输入邮箱地址">
+                </div>
+                <div class="form-group">
+                    <label for="password">密码</label>
+                    <input type="password" id="password" name="password" required autocomplete="new-password" placeholder="至少6位，含大小写字母和数字">
+                </div>
+                <div class="form-group">
+                    <label for="confirm-password">确认密码</label>
+                    <input type="password" id="confirm-password" name="confirm-password" required autocomplete="new-password" placeholder="再次输入密码">
+                </div>
+                <div id="error-message" class="error-message"></div>
+                <button type="submit" class="auth-button" id="submit-btn">
+                    <span class="btn-text">注册</span>
+                    <span class="btn-loading" style="display:none;">注册中...</span>
+                </button>
+            </form>
+            <div class="auth-footer">
+                <p>已有账号？<a href="/login.html">立即登录</a></p>
+            </div>
+        </div>
+        <div class="theme-toggle" onclick="toggleTheme()">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="5"></circle>
+                <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"></path>
+            </svg>
+        </div>
+    </div>
+    <script src="js/auth.js"></script>
+    <script>
+        document.getElementById('register-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirm-password').value;
+
+            if (password.length < 6) {
+                showError('密码长度至少为 6 个字符');
+                return;
+            }
+
+            if (!validatePasswordComplexity(password)) {
+                showError('密码必须包含大写字母、小写字母和数字');
+                return;
+            }
+
+            if (password !== confirmPassword) {
+                showError('两次输入的密码不一致');
+                return;
+            }
+
+            await handleRegister(email, password);
+        });
+    </script>
+</body>
+</html>

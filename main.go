@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 
+	dbmodel "genimage/model"
 	"genimage/service"
 	"genimage/util"
 
@@ -120,6 +121,12 @@ func main() {
 
 	// Web 服务器模式
 	if serve {
+		db, err := dbmodel.InitDB("genimage.db")
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "错误: %v\n", err)
+			os.Exit(1)
+		}
+
 		apiSvcValue := getConfigValue(apiService, getConfigString(config, "api_service"), string(Defaults.APIService))
 		modelValue, modelSource := getConfigValueWithSource(model, getConfigString(config, "model"), Defaults.Model)
 		textModelValue := getConfigValue(textModel, getConfigString(config, "text_model"), Defaults.TextModel)
@@ -135,7 +142,7 @@ func main() {
 			ModelSource:   modelSource,
 			BaseURLSource: baseURLSource,
 			APIKeySource:  apiKeySource,
-		})
+		}, db)
 		if err := server.Start(); err != nil {
 			fmt.Fprintf(os.Stderr, "错误: %v\n", err)
 			os.Exit(1)

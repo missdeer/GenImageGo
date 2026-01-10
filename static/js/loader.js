@@ -20,6 +20,19 @@ async function loadComponent(elementId, componentPath) {
 }
 
 async function initApplication() {
+    // Check authentication first
+    try {
+        const authResp = await fetch('/api/auth/me');
+        if (!authResp.ok) {
+            window.location.href = '/login.html';
+            return;
+        }
+        window.currentUser = await authResp.json();
+    } catch (e) {
+        window.location.href = '/login.html';
+        return;
+    }
+
     // Load all components in parallel
     await Promise.all([
         loadComponent('mobile-header', 'components/header.html'),

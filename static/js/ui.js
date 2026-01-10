@@ -162,3 +162,66 @@ function toggleTheme() {
 
 // 页面加载时初始化主题
 initTheme();
+
+// ===== 用户菜单 =====
+
+function toggleUserMenu(event) {
+    if (event) {
+        event.stopPropagation();
+    }
+    const container = event?.currentTarget?.closest('.user-menu-container') ||
+        document.querySelector('.user-menu-container');
+    if (!container) return;
+
+    const dropdown = container.querySelector('.user-dropdown');
+    if (!dropdown) return;
+
+    const isActive = dropdown.classList.contains('active');
+    closeUserMenu();
+    if (!isActive) {
+        // 更新用户邮箱显示
+        const emailEl = container.querySelector('.user-dropdown-email');
+        if (emailEl && window.currentUser) {
+            emailEl.textContent = window.currentUser.email;
+        }
+        dropdown.classList.add('active');
+        // 点击其他地方关闭菜单
+        setTimeout(() => {
+            document.addEventListener('click', closeUserMenuOnClickOutside);
+        }, 0);
+    }
+}
+
+function closeUserMenu() {
+    document.querySelectorAll('.user-dropdown.active').forEach((dropdown) => {
+        dropdown.classList.remove('active');
+    });
+    document.removeEventListener('click', closeUserMenuOnClickOutside);
+}
+
+function closeUserMenuOnClickOutside(e) {
+    const openDropdown = document.querySelector('.user-dropdown.active');
+    if (!openDropdown) return;
+    const container = openDropdown.closest('.user-menu-container');
+    if (container && !container.contains(e.target)) {
+        closeUserMenu();
+    }
+}
+
+function showUserProfile() {
+    closeUserMenu();
+    if (window.currentUser) {
+        showToast(`当前用户: ${window.currentUser.email}`, 'info');
+    }
+}
+
+async function handleLogout() {
+    closeUserMenu();
+    try {
+        await fetch('/api/auth/logout', { method: 'POST' });
+        window.location.href = '/login.html';
+    } catch (e) {
+        console.error('Logout failed:', e);
+        window.location.href = '/login.html';
+    }
+}

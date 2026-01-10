@@ -8,15 +8,21 @@ import (
 	"os/signal"
 	"syscall"
 
+	"genimage/auth"
 	"genimage/handler"
+
+	"gorm.io/gorm"
 )
 
 type Server struct {
-	addr       string
-	staticDir  string
-	config     ServerConfig
-	httpServer *http.Server
-	handler    *handler.Handler
+	addr        string
+	staticDir   string
+	config      ServerConfig
+	httpServer  *http.Server
+	handler     *handler.Handler
+	authHandler *handler.AuthHandler
+	authService *auth.Service
+	db          *gorm.DB
 }
 
 type ServerConfig struct {
@@ -30,7 +36,7 @@ type ServerConfig struct {
 	APIKeySource  string
 }
 
-func NewServer(addr, staticDir string, config ServerConfig) *Server {
+func NewServer(addr, staticDir string, config ServerConfig, db *gorm.DB) *Server {
 	enhancePromptText := embeddedEnhancePrompt
 
 	h := handler.New(handler.Config{
@@ -51,11 +57,17 @@ func NewServer(addr, staticDir string, config ServerConfig) *Server {
 		EnhancePromptText: enhancePromptText,
 	})
 
+	authService := auth.NewService(db)
+	authHandler := handler.NewAuthHandler(authService)
+
 	return &Server{
-		addr:      addr,
-		staticDir: staticDir,
-		config:    config,
-		handler:   h,
+		addr:        addr,
+		staticDir:   staticDir,
+		config:      config,
+		handler:     h,
+		authHandler: authHandler,
+		authService: authService,
+		db:          db,
 	}
 }
 
@@ -67,13 +79,22 @@ func (s *Server) Start() error {
 
 	mux := http.NewServeMux()
 	fileServer := http.FileServer(http.FS(staticSubFS))
+
+	mux.HandleFunc("/api/auth/register", s.authHandler.Register)
+	mux.HandleFunc("/api/auth/login", s.authHandler.Login)
+	mux.HandleFunc("/api/auth/logout", s.authHandler.Logout)
+	mux.HandleFunc("/api/auth/me", s.authHandler.Me)
+
 	mux.HandleFunc("/generate-image", s.handler.GenerateImage)
 	mux.HandleFunc("/enhance-prompt", s.handler.EnhancePrompt)
 	mux.Handle("/", fileServer)
 
+	authMiddleware := auth.Middleware(s.authService)
+	wrappedHandler := authMiddleware(mux)
+
 	s.httpServer = &http.Server{
 		Addr:    s.addr,
-		Handler: mux,
+		Handler: wrappedHandler,
 	}
 
 	sigChan := make(chan os.Signal, 1)

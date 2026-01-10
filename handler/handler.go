@@ -15,12 +15,12 @@ type Config struct {
 	BaseURLSource string
 	APIKeySource  string
 
-	DefaultAPIService  string
-	DefaultModel       string
-	DefaultTextModel   string
-	DefaultBaseURL     string
-	DefaultAPIKey      string
-	EnhancePromptText  string
+	DefaultAPIService string
+	DefaultModel      string
+	DefaultTextModel  string
+	DefaultBaseURL    string
+	DefaultAPIKey     string
+	EnhancePromptText string
 }
 
 type Handler struct {
