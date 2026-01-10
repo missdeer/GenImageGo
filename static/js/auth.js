@@ -50,7 +50,11 @@ async function handleLogin(email, password, rememberMe = false) {
         const data = await resp.json();
 
         if (resp.ok) {
-            window.location.href = '/';
+            if (data.email_verified === false) {
+                window.location.href = '/verify-pending';
+            } else {
+                window.location.href = '/';
+            }
         } else {
             showError(data.error || '登录失败');
         }
@@ -75,7 +79,7 @@ async function handleRegister(email, password) {
         const data = await resp.json();
 
         if (resp.ok) {
-            window.location.href = '/';
+            window.location.href = '/verify-pending';
         } else {
             showError(data.error || '注册失败');
         }

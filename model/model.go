@@ -11,12 +11,13 @@ import (
 )
 
 type User struct {
-	ID           uint           `gorm:"primarykey" json:"id"`
-	CreatedAt    time.Time      `json:"created_at"`
-	UpdatedAt    time.Time      `json:"updated_at"`
-	DeletedAt    gorm.DeletedAt `gorm:"index" json:"-"`
-	Email        string         `gorm:"uniqueIndex;size:100;not null" json:"email"`
-	PasswordHash string         `gorm:"size:60;not null" json:"-"`
+	ID            uint           `gorm:"primarykey" json:"id"`
+	CreatedAt     time.Time      `json:"created_at"`
+	UpdatedAt     time.Time      `json:"updated_at"`
+	DeletedAt     gorm.DeletedAt `gorm:"index" json:"-"`
+	Email         string         `gorm:"uniqueIndex;size:100;not null" json:"email"`
+	PasswordHash  string         `gorm:"size:60;not null" json:"-"`
+	EmailVerified bool           `gorm:"default:false" json:"email_verified"`
 }
 
 type Session struct {
@@ -28,6 +29,15 @@ type Session struct {
 }
 
 type PasswordResetToken struct {
+	ID        uint      `gorm:"primarykey"`
+	CreatedAt time.Time `json:"-"`
+	Token     string    `gorm:"uniqueIndex;size:64;not null"`
+	UserID    uint      `gorm:"index;not null"`
+	ExpiresAt time.Time `gorm:"index;not null"`
+	Used      bool      `gorm:"default:false"`
+}
+
+type EmailVerificationToken struct {
 	ID        uint      `gorm:"primarykey"`
 	CreatedAt time.Time `json:"-"`
 	Token     string    `gorm:"uniqueIndex;size:64;not null"`
@@ -61,7 +71,7 @@ func InitDB(dbType, dsn string) (*gorm.DB, error) {
 		return nil, fmt.Errorf("无法连接数据库: %w", err)
 	}
 
-	if err := db.AutoMigrate(&User{}, &Session{}, &PasswordResetToken{}); err != nil {
+	if err := db.AutoMigrate(&User{}, &Session{}, &PasswordResetToken{}, &EmailVerificationToken{}); err != nil {
 		return nil, fmt.Errorf("数据库迁移失败: %w", err)
 	}
 

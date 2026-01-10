@@ -44,8 +44,9 @@ type resetPasswordRequest struct {
 }
 
 type userResponse struct {
-	ID    uint   `json:"id"`
-	Email string `json:"email"`
+	ID            uint   `json:"id"`
+	Email         string `json:"email"`
+	EmailVerified bool   `json:"email_verified"`
 }
 
 type errorResponse struct {
@@ -55,6 +56,11 @@ type errorResponse struct {
 func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	if h.mailService == nil {
+		writeJSON(w, http.StatusServiceUnavailable, errorResponse{Error: "邮件服务未配置，无法注册"})
 		return
 	}
 
@@ -74,10 +80,25 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	verifyToken, err := h.authService.CreateEmailVerificationToken(user.ID)
+	if err != nil {
+		h.authService.CleanupFailedRegistration(user.ID)
+		writeJSON(w, http.StatusInternalServerError, errorResponse{Error: "创建验证令牌失败"})
+		return
+	}
+
+	verifyLink := fmt.Sprintf("%s/api/auth/verify-email?token=%s", h.baseWebURL, verifyToken.Token)
+	if err := h.mailService.SendVerificationEmail(req.Email, verifyLink); err != nil {
+		h.authService.CleanupFailedRegistration(user.ID)
+		writeJSON(w, http.StatusInternalServerError, errorResponse{Error: "发送验证邮件失败，请稍后重试"})
+		return
+	}
+
 	auth.SetSessionCookie(w, session.Token)
 	writeJSON(w, http.StatusCreated, userResponse{
-		ID:    user.ID,
-		Email: user.Email,
+		ID:            user.ID,
+		Email:         user.Email,
+		EmailVerified: user.EmailVerified,
 	})
 }
 
@@ -101,8 +122,9 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 
 	auth.SetSessionCookieWithExpiry(w, session.Token, req.RememberMe)
 	writeJSON(w, http.StatusOK, userResponse{
-		ID:    user.ID,
-		Email: user.Email,
+		ID:            user.ID,
+		Email:         user.Email,
+		EmailVerified: user.EmailVerified,
 	})
 }
 
@@ -142,8 +164,9 @@ func (h *AuthHandler) Me(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusOK, userResponse{
-		ID:    user.ID,
-		Email: user.Email,
+		ID:            user.ID,
+		Email:         user.Email,
+		EmailVerified: user.EmailVerified,
 	})
 }
 
@@ -222,6 +245,63 @@ func (h *AuthHandler) ResetPassword(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+}
+
+func (h *AuthHandler) ResendVerification(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	user := auth.GetUserFromContext(r.Context())
+	if user == nil {
+		writeJSON(w, http.StatusUnauthorized, errorResponse{Error: "未授权访问"})
+		return
+	}
+
+	if user.EmailVerified {
+		writeJSON(w, http.StatusBadRequest, errorResponse{Error: auth.ErrEmailAlreadyVerified.Error()})
+		return
+	}
+
+	if h.mailService == nil {
+		writeJSON(w, http.StatusServiceUnavailable, errorResponse{Error: "邮件服务未配置"})
+		return
+	}
+
+	verifyToken, err := h.authService.CreateEmailVerificationToken(user.ID)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, errorResponse{Error: "创建验证令牌失败"})
+		return
+	}
+
+	verifyLink := fmt.Sprintf("%s/api/auth/verify-email?token=%s", h.baseWebURL, verifyToken.Token)
+	if err := h.mailService.SendVerificationEmail(user.Email, verifyLink); err != nil {
+		writeJSON(w, http.StatusInternalServerError, errorResponse{Error: "发送邮件失败，请稍后重试"})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+}
+
+func (h *AuthHandler) VerifyEmail(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	token := r.URL.Query().Get("token")
+	if token == "" {
+		http.Redirect(w, r, "/?error=missing_token", http.StatusFound)
+		return
+	}
+
+	if err := h.authService.VerifyEmail(token); err != nil {
+		http.Redirect(w, r, "/?error=invalid_token", http.StatusFound)
+		return
+	}
+
+	http.Redirect(w, r, "/", http.StatusFound)
 }
 
 func writeJSON(w http.ResponseWriter, status int, v interface{}) {

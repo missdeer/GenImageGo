@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>邮箱验证 - Image Go</title>
+    <link rel="stylesheet" href="css/variables.css">
+    <link rel="stylesheet" href="css/auth.css">
+    <script>
+        (function() {
+            const theme = localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-theme', theme);
+        })();
+    </script>
+</head>
+<body>
+    <div class="auth-container">
+        <div class="auth-card">
+            <div class="auth-header">
+                <h1>Image Go</h1>
+                <p>邮箱验证</p>
+            </div>
+            <div class="verify-content">
+                <div class="verify-icon">
+                    <svg viewBox="0 0 24 24" width="64" height="64" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                    </svg>
+                </div>
+                <p class="verify-message">我们已向您的邮箱发送了一封验证邮件。</p>
+                <p class="verify-hint">请查收邮件并点击验证链接完成注册。</p>
+                <p class="verify-hint">如果没有收到邮件，请检查垃圾邮件文件夹。</p>
+                <div id="error-message" class="error-message"></div>
+                <div id="success-message" class="success-message" style="display:none;"></div>
+                <button type="button" class="auth-button" id="resend-btn">
+                    <span class="btn-text">重新发送验证邮件</span>
+                    <span class="btn-loading" style="display:none;">发送中...</span>
+                </button>
+            </div>
+            <div class="auth-footer">
+                <p><a href="/login" id="logout-link">退出登录</a></p>
+            </div>
+        </div>
+        <div class="theme-toggle" onclick="toggleTheme()">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="5"></circle>
+                <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"></path>
+            </svg>
+        </div>
+    </div>
+    <script src="js/auth.js"></script>
+    <script>
+        const resendBtn = document.getElementById('resend-btn');
+        const errorEl = document.getElementById('error-message');
+        const successEl = document.getElementById('success-message');
+        const logoutLink = document.getElementById('logout-link');
+
+        function showMessage(el, message) {
+            el.textContent = message;
+            el.style.display = 'block';
+        }
+
+        function hideMessages() {
+            errorEl.style.display = 'none';
+            successEl.style.display = 'none';
+        }
+
+        function setButtonLoading(loading) {
+            const btnText = resendBtn.querySelector('.btn-text');
+            const btnLoading = resendBtn.querySelector('.btn-loading');
+            resendBtn.disabled = loading;
+            btnText.style.display = loading ? 'none' : 'inline';
+            btnLoading.style.display = loading ? 'inline' : 'none';
+        }
+
+        resendBtn.addEventListener('click', async () => {
+            hideMessages();
+            setButtonLoading(true);
+
+            try {
+                const resp = await fetch('/api/auth/resend-verification', {
+                    method: 'POST'
+                });
+
+                const data = await resp.json();
+
+                if (resp.ok) {
+                    showMessage(successEl, '验证邮件已发送，请查收');
+                } else {
+                    showMessage(errorEl, data.error || '发送失败');
+                }
+            } catch (e) {
+                showMessage(errorEl, '网络错误，请重试');
+            } finally {
+                setButtonLoading(false);
+            }
+        });
+
+        logoutLink.addEventListener('click', async (e) => {
+            e.preventDefault();
+            await handleLogout();
+        });
+
+        (async () => {
+            const isAuth = await checkAuth();
+            if (!isAuth) {
+                window.location.href = '/login';
+                return;
+            }
+            if (window.currentUser && window.currentUser.email_verified) {
+                window.location.href = '/';
+            }
+        })();
+    </script>
+    <style>
+        .verify-content {
+            text-align: center;
+            padding: 1rem 0;
+        }
+        .verify-icon {
+            color: var(--text-secondary);
+            margin-bottom: 1.5rem;
+        }
+        .verify-message {
+            font-size: 1.1rem;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+        }
+        .verify-hint {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+        }
+        .success-message {
+            color: #10b981;
+            font-size: 0.875rem;
+            margin: 1rem 0;
+            padding: 0.75rem;
+            background: rgba(16, 185, 129, 0.1);
+            border-radius: 0.375rem;
+        }
+        #resend-btn {
+            margin-top: 1.5rem;
+        }
+    </style>
+</body>
+</html>

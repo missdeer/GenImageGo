@@ -108,6 +108,8 @@ func (s *Server) Start() error {
 	mux.HandleFunc("/api/auth/forgot-password", s.authHandler.ForgotPassword)
 	mux.HandleFunc("/api/auth/validate-reset-token", s.authHandler.ValidateResetToken)
 	mux.HandleFunc("/api/auth/reset-password", s.authHandler.ResetPassword)
+	mux.HandleFunc("/api/auth/resend-verification", s.authHandler.ResendVerification)
+	mux.HandleFunc("/api/auth/verify-email", s.authHandler.VerifyEmail)
 
 	mux.HandleFunc("/generate-image", s.handler.GenerateImage)
 	mux.HandleFunc("/enhance-prompt", s.handler.EnhancePrompt)
@@ -122,12 +124,14 @@ func (s *Server) Start() error {
 	mux.HandleFunc("/register", serveHTML("register.html"))
 	mux.HandleFunc("/forgot-password", serveHTML("forgot-password.html"))
 	mux.HandleFunc("/reset-password", serveHTML("reset-password.html"))
+	mux.HandleFunc("/verify-pending", serveHTML("verify-pending.html"))
 
 	htmlRedirects := map[string]string{
 		"/login.html":           "/login",
 		"/register.html":        "/register",
 		"/forgot-password.html": "/forgot-password",
 		"/reset-password.html":  "/reset-password",
+		"/verify-pending.html":  "/verify-pending",
 		"/index.html":           "/",
 	}
 

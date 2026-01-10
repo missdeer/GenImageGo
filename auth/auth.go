@@ -14,25 +14,30 @@ import (
 )
 
 const (
-	bcryptCost         = 10
-	sessionTokenLen    = 32
-	resetTokenLen      = 32
-	sessionDuration    = 7 * 24 * time.Hour
-	resetTokenDuration = 1 * time.Hour
-	minPasswordLen     = 6
+	bcryptCost                = 10
+	sessionTokenLen           = 32
+	resetTokenLen             = 32
+	verificationTokenLen      = 32
+	sessionDuration           = 7 * 24 * time.Hour
+	resetTokenDuration        = 1 * time.Hour
+	verificationTokenDuration = 1 * time.Hour
+	minPasswordLen            = 6
 )
 
 var (
-	ErrEmailInvalid       = errors.New("邮箱格式不正确")
-	ErrEmailExists        = errors.New("该邮箱已被注册")
-	ErrEmailNotFound      = errors.New("该邮箱未注册")
-	ErrPasswordTooShort   = errors.New("密码长度至少为 6 个字符")
-	ErrPasswordTooWeak    = errors.New("密码必须包含大写字母、小写字母和数字")
-	ErrInvalidCredentials = errors.New("邮箱或密码错误")
-	ErrSessionExpired     = errors.New("会话已过期")
-	ErrSessionNotFound    = errors.New("会话不存在")
-	ErrResetTokenInvalid  = errors.New("重置链接无效或已过期")
-	ErrResetTokenUsed     = errors.New("重置链接已被使用")
+	ErrEmailInvalid             = errors.New("邮箱格式不正确")
+	ErrEmailExists              = errors.New("该邮箱已被注册")
+	ErrEmailNotFound            = errors.New("该邮箱未注册")
+	ErrPasswordTooShort         = errors.New("密码长度至少为 6 个字符")
+	ErrPasswordTooWeak          = errors.New("密码必须包含大写字母、小写字母和数字")
+	ErrInvalidCredentials       = errors.New("邮箱或密码错误")
+	ErrSessionExpired           = errors.New("会话已过期")
+	ErrSessionNotFound          = errors.New("会话不存在")
+	ErrResetTokenInvalid        = errors.New("重置链接无效或已过期")
+	ErrResetTokenUsed           = errors.New("重置链接已被使用")
+	ErrVerificationTokenInvalid = errors.New("验证链接无效或已过期")
+	ErrVerificationTokenUsed    = errors.New("验证链接已被使用")
+	ErrEmailAlreadyVerified     = errors.New("邮箱已验证")
 )
 
 var emailRegex = regexp.MustCompile(`^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`)
@@ -95,6 +100,24 @@ func (s *Service) Register(email, password string) (*model.User, *model.Session,
 	}
 
 	return user, session, nil
+}
+
+func (s *Service) CleanupFailedRegistration(userID uint) error {
+	return s.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Where("user_id = ?", userID).Delete(&model.EmailVerificationToken{}).Error; err != nil {
+			return err
+		}
+		if err := tx.Where("user_id = ?", userID).Delete(&model.Session{}).Error; err != nil {
+			return err
+		}
+		if err := tx.Where("user_id = ?", userID).Delete(&model.PasswordResetToken{}).Error; err != nil {
+			return err
+		}
+		if err := tx.Unscoped().Delete(&model.User{}, userID).Error; err != nil {
+			return err
+		}
+		return nil
+	})
 }
 
 func (s *Service) Login(email, password string) (*model.User, *model.Session, error) {
@@ -253,4 +276,65 @@ func (s *Service) ResetPassword(token, newPassword string) error {
 
 func (s *Service) CleanExpiredResetTokens() error {
 	return s.db.Where("expires_at < ? OR used = ?", time.Now(), true).Delete(&model.PasswordResetToken{}).Error
+}
+
+func (s *Service) CreateEmailVerificationToken(userID uint) (*model.EmailVerificationToken, error) {
+	if err := s.db.Where("user_id = ? AND used = ?", userID, false).Delete(&model.EmailVerificationToken{}).Error; err != nil {
+		return nil, err
+	}
+
+	tokenBytes := make([]byte, verificationTokenLen)
+	if _, err := rand.Read(tokenBytes); err != nil {
+		return nil, err
+	}
+
+	token := &model.EmailVerificationToken{
+		Token:     hex.EncodeToString(tokenBytes),
+		UserID:    userID,
+		ExpiresAt: time.Now().Add(verificationTokenDuration),
+		Used:      false,
+	}
+
+	if err := s.db.Create(token).Error; err != nil {
+		return nil, err
+	}
+
+	return token, nil
+}
+
+func (s *Service) VerifyEmail(token string) error {
+	return s.db.Transaction(func(tx *gorm.DB) error {
+		var verifyToken model.EmailVerificationToken
+		if err := tx.Where("token = ?", token).First(&verifyToken).Error; err != nil {
+			return ErrVerificationTokenInvalid
+		}
+
+		if verifyToken.Used {
+			return ErrVerificationTokenUsed
+		}
+
+		if time.Now().After(verifyToken.ExpiresAt) {
+			return ErrVerificationTokenInvalid
+		}
+
+		result := tx.Model(&model.EmailVerificationToken{}).
+			Where("id = ? AND used = ?", verifyToken.ID, false).
+			Update("used", true)
+		if result.Error != nil {
+			return result.Error
+		}
+		if result.RowsAffected == 0 {
+			return ErrVerificationTokenUsed
+		}
+
+		if err := tx.Model(&model.User{}).Where("id = ?", verifyToken.UserID).Update("email_verified", true).Error; err != nil {
+			return err
+		}
+
+		return nil
+	})
+}
+
+func (s *Service) CleanExpiredVerificationTokens() error {
+	return s.db.Where("expires_at < ? OR used = ?", time.Now(), true).Delete(&model.EmailVerificationToken{}).Error
 }

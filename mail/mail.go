@@ -40,6 +40,23 @@ Image Go 团队`, resetLink)
 	return s.sendEmail(toEmail, subject, body)
 }
 
+func (s *Service) SendVerificationEmail(toEmail, verifyLink string) error {
+	subject := "邮箱验证 - Image Go"
+	body := fmt.Sprintf(`您好，
+
+感谢您注册 Image Go！
+
+请点击以下链接验证您的邮箱（链接有效期 1 小时）：
+%s
+
+如果您没有注册 Image Go 账户，请忽略此邮件。
+
+此致
+Image Go 团队`, verifyLink)
+
+	return s.sendEmail(toEmail, subject, body)
+}
+
 func (s *Service) sendEmail(to, subject, body string) error {
 	from := s.config.From
 	if from == "" {

@@ -24,6 +24,7 @@ var publicPaths = []string{
 	"/api/auth/forgot-password",
 	"/api/auth/validate-reset-token",
 	"/api/auth/reset-password",
+	"/api/auth/verify-email",
 	"/css/",
 	"/js/",
 	"/components/",
@@ -34,6 +35,17 @@ var authPagePaths = map[string]bool{
 	"/register":        true,
 	"/forgot-password": true,
 	"/reset-password":  true,
+}
+
+var unverifiedAllowedPaths = []string{
+	"/verify-pending",
+	"/api/auth/me",
+	"/api/auth/logout",
+	"/api/auth/resend-verification",
+	"/api/auth/verify-email",
+	"/css/",
+	"/js/",
+	"/components/",
 }
 
 func isPublicPath(path string) bool {
@@ -49,6 +61,15 @@ func isAuthPage(path string) bool {
 	return authPagePaths[path]
 }
 
+func isUnverifiedAllowedPath(path string) bool {
+	for _, p := range unverifiedAllowedPaths {
+		if strings.HasPrefix(path, p) {
+			return true
+		}
+	}
+	return false
+}
+
 func Middleware(authService *Service) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -59,6 +80,12 @@ func Middleware(authService *Service) func(http.Handler) http.Handler {
 						http.Redirect(w, r, "/", http.StatusSeeOther)
 						return
 					}
+
+					if !user.EmailVerified && !isUnverifiedAllowedPath(r.URL.Path) {
+						handleUnverified(w, r)
+						return
+					}
+
 					ctx := context.WithValue(r.Context(), UserContextKey, user)
 					next.ServeHTTP(w, r.WithContext(ctx))
 					return
@@ -74,6 +101,16 @@ func Middleware(authService *Service) func(http.Handler) http.Handler {
 			handleUnauthorized(w, r)
 		})
 	}
+}
+
+func handleUnverified(w http.ResponseWriter, r *http.Request) {
+	if strings.HasPrefix(r.URL.Path, "/api/") {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusForbidden)
+		w.Write([]byte(`{"error":"请先验证邮箱"}`))
+		return
+	}
+	http.Redirect(w, r, "/verify-pending", http.StatusSeeOther)
 }
 
 func handleUnauthorized(w http.ResponseWriter, r *http.Request) {
