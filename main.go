@@ -148,6 +148,16 @@ func main() {
 		baseURLValue, baseURLSource := getConfigValueWithSource(baseURL, getConfigString(config, "base_url"), Defaults.BaseURL)
 		apiKeyValue, apiKeySource := getConfigValueWithSource(apiKey, getConfigString(config, "api_key"), Defaults.APIKey)
 
+		var smtpConfig *SMTPConfig
+		if config != nil && config.SMTP != nil {
+			smtpConfig = config.SMTP
+		}
+
+		var baseWebURL string
+		if config != nil {
+			baseWebURL = config.BaseWebURL
+		}
+
 		server := NewServer(serverAddr, staticDir, ServerConfig{
 			APIService:    apiSvcValue,
 			Model:         modelValue,
@@ -157,6 +167,8 @@ func main() {
 			ModelSource:   modelSource,
 			BaseURLSource: baseURLSource,
 			APIKeySource:  apiKeySource,
+			SMTP:          smtpConfig,
+			BaseWebURL:    baseWebURL,
 		}, db)
 		if err := server.Start(); err != nil {
 			fmt.Fprintf(os.Stderr, "错误: %v\n", err)

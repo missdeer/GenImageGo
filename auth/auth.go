@@ -14,20 +14,25 @@ import (
 )
 
 const (
-	bcryptCost      = 10
-	sessionTokenLen = 32
-	sessionDuration = 7 * 24 * time.Hour
-	minPasswordLen  = 6
+	bcryptCost         = 10
+	sessionTokenLen    = 32
+	resetTokenLen      = 32
+	sessionDuration    = 7 * 24 * time.Hour
+	resetTokenDuration = 1 * time.Hour
+	minPasswordLen     = 6
 )
 
 var (
 	ErrEmailInvalid       = errors.New("邮箱格式不正确")
 	ErrEmailExists        = errors.New("该邮箱已被注册")
+	ErrEmailNotFound      = errors.New("该邮箱未注册")
 	ErrPasswordTooShort   = errors.New("密码长度至少为 6 个字符")
 	ErrPasswordTooWeak    = errors.New("密码必须包含大写字母、小写字母和数字")
 	ErrInvalidCredentials = errors.New("邮箱或密码错误")
 	ErrSessionExpired     = errors.New("会话已过期")
 	ErrSessionNotFound    = errors.New("会话不存在")
+	ErrResetTokenInvalid  = errors.New("重置链接无效或已过期")
+	ErrResetTokenUsed     = errors.New("重置链接已被使用")
 )
 
 var emailRegex = regexp.MustCompile(`^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`)
@@ -154,4 +159,98 @@ func (s *Service) createSession(userID uint) (*model.Session, error) {
 	}
 
 	return session, nil
+}
+
+func (s *Service) CreatePasswordResetToken(email string) (*model.PasswordResetToken, error) {
+	if !emailRegex.MatchString(email) {
+		return nil, ErrEmailInvalid
+	}
+
+	var user model.User
+	if err := s.db.Where("email = ?", email).First(&user).Error; err != nil {
+		return nil, ErrEmailNotFound
+	}
+
+	s.db.Where("user_id = ? AND used = ?", user.ID, false).Delete(&model.PasswordResetToken{})
+
+	tokenBytes := make([]byte, resetTokenLen)
+	if _, err := rand.Read(tokenBytes); err != nil {
+		return nil, err
+	}
+
+	resetToken := &model.PasswordResetToken{
+		Token:     hex.EncodeToString(tokenBytes),
+		UserID:    user.ID,
+		ExpiresAt: time.Now().Add(resetTokenDuration),
+		Used:      false,
+	}
+
+	if err := s.db.Create(resetToken).Error; err != nil {
+		return nil, err
+	}
+
+	return resetToken, nil
+}
+
+func (s *Service) ValidatePasswordResetToken(token string) (*model.User, error) {
+	var resetToken model.PasswordResetToken
+	if err := s.db.Where("token = ?", token).First(&resetToken).Error; err != nil {
+		return nil, ErrResetTokenInvalid
+	}
+
+	if resetToken.Used {
+		return nil, ErrResetTokenUsed
+	}
+
+	if time.Now().After(resetToken.ExpiresAt) {
+		return nil, ErrResetTokenInvalid
+	}
+
+	var user model.User
+	if err := s.db.First(&user, resetToken.UserID).Error; err != nil {
+		return nil, err
+	}
+
+	return &user, nil
+}
+
+func (s *Service) ResetPassword(token, newPassword string) error {
+	if len(newPassword) < minPasswordLen {
+		return ErrPasswordTooShort
+	}
+	if !validatePasswordComplexity(newPassword) {
+		return ErrPasswordTooWeak
+	}
+
+	var resetToken model.PasswordResetToken
+	if err := s.db.Where("token = ?", token).First(&resetToken).Error; err != nil {
+		return ErrResetTokenInvalid
+	}
+
+	if resetToken.Used {
+		return ErrResetTokenUsed
+	}
+
+	if time.Now().After(resetToken.ExpiresAt) {
+		return ErrResetTokenInvalid
+	}
+
+	hash, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcryptCost)
+	if err != nil {
+		return err
+	}
+
+	if err := s.db.Model(&model.User{}).Where("id = ?", resetToken.UserID).Update("password_hash", string(hash)).Error; err != nil {
+		return err
+	}
+
+	s.db.Model(&resetToken).Update("used", true)
+
+	s.db.Where("user_id = ?", resetToken.UserID).Delete(&model.Session{})
+
+	return nil
+}
+
+func (s *Service) CleanExpiredResetTokens() error {
+	return s.db.Where("expires_at < ? OR used = ?", time.Now(), true).Delete(&model.PasswordResetToken{}).Error
 }

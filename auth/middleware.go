@@ -17,8 +17,13 @@ const SessionCookieName = "session_token"
 var publicPaths = []string{
 	"/login.html",
 	"/register.html",
+	"/forgot-password.html",
+	"/reset-password.html",
 	"/api/auth/login",
 	"/api/auth/register",
+	"/api/auth/forgot-password",
+	"/api/auth/validate-reset-token",
+	"/api/auth/reset-password",
 	"/css/",
 	"/js/",
 	"/components/",

@@ -50,3 +50,29 @@ Open `http://127.0.0.1:8080` in a browser. Static assets are embedded at build t
 
 - Use `--api-key` or set `api_key` in `config.json`.
 - Vertex AI requires `--project`, and optionally `--location` and `--credentials`.
+
+## Password Reset Email Configuration
+
+To enable the "Forgot Password" feature, configure SMTP settings in your `config.json`:
+
+```json
+{
+  "smtp": {
+    "host": "smtp.example.com",
+    "port": 587,
+    "username": "your-email@example.com",
+    "password": "your-password",
+    "from": "noreply@example.com"
+  },
+  "base_web_url": "http://your-domain.com"
+}
+```
+
+| Field | Description |
+|-------|-------------|
+| `host` | SMTP server hostname |
+| `port` | SMTP port (587 for STARTTLS, 465 for SSL/TLS) |
+| `username` | SMTP authentication username |
+| `password` | SMTP authentication password |
+| `from` | Sender email address (optional, defaults to username) |
+| `base_web_url` | Base URL for password reset links (optional, defaults to server address) |

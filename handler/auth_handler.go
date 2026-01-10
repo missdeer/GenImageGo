@@ -2,17 +2,25 @@ package handler
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"genimage/auth"
+	"genimage/mail"
 )
 
 type AuthHandler struct {
 	authService *auth.Service
+	mailService *mail.Service
+	baseWebURL  string
 }
 
-func NewAuthHandler(authService *auth.Service) *AuthHandler {
-	return &AuthHandler{authService: authService}
+func NewAuthHandler(authService *auth.Service, mailService *mail.Service, baseWebURL string) *AuthHandler {
+	return &AuthHandler{
+		authService: authService,
+		mailService: mailService,
+		baseWebURL:  baseWebURL,
+	}
 }
 
 type registerRequest struct {
@@ -23,6 +31,15 @@ type registerRequest struct {
 type loginRequest struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
+}
+
+type forgotPasswordRequest struct {
+	Email string `json:"email"`
+}
+
+type resetPasswordRequest struct {
+	Token       string `json:"token"`
+	NewPassword string `json:"new_password"`
 }
 
 type userResponse struct {
@@ -127,6 +144,83 @@ func (h *AuthHandler) Me(w http.ResponseWriter, r *http.Request) {
 		ID:    user.ID,
 		Email: user.Email,
 	})
+}
+
+func (h *AuthHandler) ForgotPassword(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req forgotPasswordRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSON(w, http.StatusBadRequest, errorResponse{Error: "无效的请求格式"})
+		return
+	}
+
+	resetToken, err := h.authService.CreatePasswordResetToken(req.Email)
+	if err != nil {
+		if err == auth.ErrEmailNotFound {
+			writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+			return
+		}
+		writeJSON(w, http.StatusBadRequest, errorResponse{Error: err.Error()})
+		return
+	}
+
+	if h.mailService != nil {
+		resetLink := fmt.Sprintf("%s/reset-password.html?token=%s", h.baseWebURL, resetToken.Token)
+		if err := h.mailService.SendPasswordResetEmail(req.Email, resetLink); err != nil {
+			writeJSON(w, http.StatusInternalServerError, errorResponse{Error: "发送邮件失败，请稍后重试"})
+			return
+		}
+	}
+
+	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+}
+
+func (h *AuthHandler) ValidateResetToken(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	token := r.URL.Query().Get("token")
+	if token == "" {
+		writeJSON(w, http.StatusBadRequest, errorResponse{Error: "缺少 token 参数"})
+		return
+	}
+
+	user, err := h.authService.ValidatePasswordResetToken(token)
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, errorResponse{Error: err.Error()})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"valid": true,
+		"email": user.Email,
+	})
+}
+
+func (h *AuthHandler) ResetPassword(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req resetPasswordRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSON(w, http.StatusBadRequest, errorResponse{Error: "无效的请求格式"})
+		return
+	}
+
+	if err := h.authService.ResetPassword(req.Token, req.NewPassword); err != nil {
+		writeJSON(w, http.StatusBadRequest, errorResponse{Error: err.Error()})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }
 
 func writeJSON(w http.ResponseWriter, status int, v interface{}) {

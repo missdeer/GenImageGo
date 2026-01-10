@@ -10,6 +10,7 @@ import (
 
 	"genimage/auth"
 	"genimage/handler"
+	"genimage/mail"
 
 	"gorm.io/gorm"
 )
@@ -34,6 +35,8 @@ type ServerConfig struct {
 	ModelSource   string
 	BaseURLSource string
 	APIKeySource  string
+	SMTP          *SMTPConfig
+	BaseWebURL    string
 }
 
 func NewServer(addr, staticDir string, config ServerConfig, db *gorm.DB) *Server {
@@ -58,7 +61,24 @@ func NewServer(addr, staticDir string, config ServerConfig, db *gorm.DB) *Server
 	})
 
 	authService := auth.NewService(db)
-	authHandler := handler.NewAuthHandler(authService)
+
+	var mailService *mail.Service
+	if config.SMTP != nil && config.SMTP.Host != "" {
+		mailService = mail.NewService(mail.SMTPConfig{
+			Host:     config.SMTP.Host,
+			Port:     config.SMTP.Port,
+			Username: config.SMTP.Username,
+			Password: config.SMTP.Password,
+			From:     config.SMTP.From,
+		})
+	}
+
+	baseWebURL := config.BaseWebURL
+	if baseWebURL == "" {
+		baseWebURL = fmt.Sprintf("http://%s", addr)
+	}
+
+	authHandler := handler.NewAuthHandler(authService, mailService, baseWebURL)
 
 	return &Server{
 		addr:        addr,
@@ -84,6 +104,9 @@ func (s *Server) Start() error {
 	mux.HandleFunc("/api/auth/login", s.authHandler.Login)
 	mux.HandleFunc("/api/auth/logout", s.authHandler.Logout)
 	mux.HandleFunc("/api/auth/me", s.authHandler.Me)
+	mux.HandleFunc("/api/auth/forgot-password", s.authHandler.ForgotPassword)
+	mux.HandleFunc("/api/auth/validate-reset-token", s.authHandler.ValidateResetToken)
+	mux.HandleFunc("/api/auth/reset-password", s.authHandler.ResetPassword)
 
 	mux.HandleFunc("/generate-image", s.handler.GenerateImage)
 	mux.HandleFunc("/enhance-prompt", s.handler.EnhancePrompt)
