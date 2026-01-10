@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 
 	"genimage/auth"
@@ -110,7 +111,35 @@ func (s *Server) Start() error {
 
 	mux.HandleFunc("/generate-image", s.handler.GenerateImage)
 	mux.HandleFunc("/enhance-prompt", s.handler.EnhancePrompt)
-	mux.Handle("/", fileServer)
+
+	serveHTML := func(filename string) http.HandlerFunc {
+		return func(w http.ResponseWriter, r *http.Request) {
+			r.URL.Path = "/" + filename
+			fileServer.ServeHTTP(w, r)
+		}
+	}
+	mux.HandleFunc("/login", serveHTML("login.html"))
+	mux.HandleFunc("/register", serveHTML("register.html"))
+	mux.HandleFunc("/forgot-password", serveHTML("forgot-password.html"))
+	mux.HandleFunc("/reset-password", serveHTML("reset-password.html"))
+
+	htmlRedirects := map[string]string{
+		"/login.html":           "/login",
+		"/register.html":        "/register",
+		"/forgot-password.html": "/forgot-password",
+		"/reset-password.html":  "/reset-password",
+		"/index.html":           "/",
+	}
+
+	mux.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasSuffix(r.URL.Path, ".html") {
+			if redirect, ok := htmlRedirects[r.URL.Path]; ok {
+				http.Redirect(w, r, redirect, http.StatusMovedPermanently)
+				return
+			}
+		}
+		fileServer.ServeHTTP(w, r)
+	}))
 
 	authMiddleware := auth.Middleware(s.authService)
 	wrappedHandler := authMiddleware(mux)

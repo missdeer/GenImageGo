@@ -24,12 +24,12 @@ async function initApplication() {
     try {
         const authResp = await fetch('/api/auth/me');
         if (!authResp.ok) {
-            window.location.href = '/login.html';
+            window.location.href = '/login';
             return;
         }
         window.currentUser = await authResp.json();
     } catch (e) {
-        window.location.href = '/login.html';
+        window.location.href = '/login';
         return;
     }
 

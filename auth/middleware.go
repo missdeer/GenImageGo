@@ -15,10 +15,10 @@ const UserContextKey contextKey = "user"
 const SessionCookieName = "session_token"
 
 var publicPaths = []string{
-	"/login.html",
-	"/register.html",
-	"/forgot-password.html",
-	"/reset-password.html",
+	"/login",
+	"/register",
+	"/forgot-password",
+	"/reset-password",
 	"/api/auth/login",
 	"/api/auth/register",
 	"/api/auth/forgot-password",
@@ -27,6 +27,13 @@ var publicPaths = []string{
 	"/css/",
 	"/js/",
 	"/components/",
+}
+
+var authPagePaths = map[string]bool{
+	"/login":           true,
+	"/register":        true,
+	"/forgot-password": true,
+	"/reset-password":  true,
 }
 
 func isPublicPath(path string) bool {
@@ -38,29 +45,33 @@ func isPublicPath(path string) bool {
 	return false
 }
 
+func isAuthPage(path string) bool {
+	return authPagePaths[path]
+}
+
 func Middleware(authService *Service) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			cookie, err := r.Cookie(SessionCookieName)
+			if err == nil {
+				if user, err := authService.ValidateSession(cookie.Value); err == nil {
+					if isAuthPage(r.URL.Path) {
+						http.Redirect(w, r, "/", http.StatusSeeOther)
+						return
+					}
+					ctx := context.WithValue(r.Context(), UserContextKey, user)
+					next.ServeHTTP(w, r.WithContext(ctx))
+					return
+				}
+				clearSessionCookie(w)
+			}
+
 			if isPublicPath(r.URL.Path) {
 				next.ServeHTTP(w, r)
 				return
 			}
 
-			cookie, err := r.Cookie(SessionCookieName)
-			if err != nil {
-				handleUnauthorized(w, r)
-				return
-			}
-
-			user, err := authService.ValidateSession(cookie.Value)
-			if err != nil {
-				clearSessionCookie(w)
-				handleUnauthorized(w, r)
-				return
-			}
-
-			ctx := context.WithValue(r.Context(), UserContextKey, user)
-			next.ServeHTTP(w, r.WithContext(ctx))
+			handleUnauthorized(w, r)
 		})
 	}
 }
@@ -70,7 +81,7 @@ func handleUnauthorized(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "未授权访问", http.StatusUnauthorized)
 		return
 	}
-	http.Redirect(w, r, "/login.html", http.StatusSeeOther)
+	http.Redirect(w, r, "/login", http.StatusSeeOther)
 }
 
 func GetUserFromContext(ctx context.Context) *model.User {

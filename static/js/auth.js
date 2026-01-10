@@ -89,10 +89,10 @@ async function handleRegister(email, password) {
 async function handleLogout() {
     try {
         await fetch('/api/auth/logout', { method: 'POST' });
-        window.location.href = '/login.html';
+        window.location.href = '/login';
     } catch (e) {
         console.error('Logout failed:', e);
-        window.location.href = '/login.html';
+        window.location.href = '/login';
     }
 }
 
