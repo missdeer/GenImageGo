@@ -158,17 +158,23 @@ func main() {
 			baseWebURL = config.BaseWebURL
 		}
 
+		var dailyLoginPoints int
+		if config != nil {
+			dailyLoginPoints = config.DailyLoginPoints
+		}
+
 		server := NewServer(serverAddr, staticDir, ServerConfig{
-			APIService:    apiSvcValue,
-			Model:         modelValue,
-			TextModel:     textModelValue,
-			BaseURL:       baseURLValue,
-			APIKey:        apiKeyValue,
-			ModelSource:   modelSource,
-			BaseURLSource: baseURLSource,
-			APIKeySource:  apiKeySource,
-			SMTP:          smtpConfig,
-			BaseWebURL:    baseWebURL,
+			APIService:       apiSvcValue,
+			Model:            modelValue,
+			TextModel:        textModelValue,
+			BaseURL:          baseURLValue,
+			APIKey:           apiKeyValue,
+			ModelSource:      modelSource,
+			BaseURLSource:    baseURLSource,
+			APIKeySource:     apiKeySource,
+			SMTP:             smtpConfig,
+			BaseWebURL:       baseWebURL,
+			DailyLoginPoints: dailyLoginPoints,
 		}, db)
 		if err := server.Start(); err != nil {
 			fmt.Fprintf(os.Stderr, "错误: %v\n", err)

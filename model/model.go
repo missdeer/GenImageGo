@@ -10,14 +10,36 @@ import (
 	"gorm.io/gorm"
 )
 
+type UserType int
+
+const (
+	UserTypeNormal     UserType = iota // 普通用户
+	UserTypeOrgAdmin                   // 组织管理员
+	UserTypeSuperAdmin                 // 超级管理员
+)
+
+func (t UserType) String() string {
+	switch t {
+	case UserTypeSuperAdmin:
+		return "超级管理员"
+	case UserTypeOrgAdmin:
+		return "组织管理员"
+	default:
+		return "普通用户"
+	}
+}
+
 type User struct {
-	ID            uint           `gorm:"primarykey" json:"id"`
-	CreatedAt     time.Time      `json:"created_at"`
-	UpdatedAt     time.Time      `json:"updated_at"`
-	DeletedAt     gorm.DeletedAt `gorm:"index" json:"-"`
-	Email         string         `gorm:"uniqueIndex;size:100;not null" json:"email"`
-	PasswordHash  string         `gorm:"size:60;not null" json:"-"`
-	EmailVerified bool           `gorm:"default:false" json:"email_verified"`
+	ID             uint           `gorm:"primarykey" json:"id"`
+	CreatedAt      time.Time      `json:"created_at"`
+	UpdatedAt      time.Time      `json:"updated_at"`
+	DeletedAt      gorm.DeletedAt `gorm:"index" json:"-"`
+	Email          string         `gorm:"uniqueIndex;size:100;not null" json:"email"`
+	PasswordHash   string         `gorm:"size:60;not null" json:"-"`
+	EmailVerified  bool           `gorm:"default:false" json:"email_verified"`
+	Type           UserType       `gorm:"default:0" json:"type"`
+	Points         int            `gorm:"default:0" json:"points"`
+	LastPointsDate *time.Time     `gorm:"index" json:"-"`
 }
 
 type Session struct {

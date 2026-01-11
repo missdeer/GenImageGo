@@ -7,6 +7,7 @@ import (
 
 	"genimage/auth"
 	"genimage/mail"
+	"genimage/model"
 )
 
 type AuthHandler struct {
@@ -44,9 +45,11 @@ type resetPasswordRequest struct {
 }
 
 type userResponse struct {
-	ID            uint   `json:"id"`
-	Email         string `json:"email"`
-	EmailVerified bool   `json:"email_verified"`
+	ID            uint           `json:"id"`
+	Email         string         `json:"email"`
+	EmailVerified bool           `json:"email_verified"`
+	Type          model.UserType `json:"type"`
+	Points        int            `json:"points"`
 }
 
 type errorResponse struct {
@@ -99,6 +102,8 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		ID:            user.ID,
 		Email:         user.Email,
 		EmailVerified: user.EmailVerified,
+		Type:          user.Type,
+		Points:        user.Points,
 	})
 }
 
@@ -125,6 +130,8 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		ID:            user.ID,
 		Email:         user.Email,
 		EmailVerified: user.EmailVerified,
+		Type:          user.Type,
+		Points:        user.Points,
 	})
 }
 
@@ -167,6 +174,8 @@ func (h *AuthHandler) Me(w http.ResponseWriter, r *http.Request) {
 		ID:            user.ID,
 		Email:         user.Email,
 		EmailVerified: user.EmailVerified,
+		Type:          user.Type,
+		Points:        user.Points,
 	})
 }
 

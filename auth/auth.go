@@ -58,11 +58,12 @@ func validatePasswordComplexity(password string) bool {
 }
 
 type Service struct {
-	db *gorm.DB
+	db               *gorm.DB
+	dailyLoginPoints int
 }
 
-func NewService(db *gorm.DB) *Service {
-	return &Service{db: db}
+func NewService(db *gorm.DB, dailyLoginPoints int) *Service {
+	return &Service{db: db, dailyLoginPoints: dailyLoginPoints}
 }
 
 func (s *Service) Register(email, password string) (*model.User, *model.Session, error) {
@@ -128,6 +129,22 @@ func (s *Service) Login(email, password string) (*model.User, *model.Session, er
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password)); err != nil {
 		return nil, nil, ErrInvalidCredentials
+	}
+
+	if s.dailyLoginPoints > 0 && user.EmailVerified && user.Type == model.UserTypeNormal {
+		now := time.Now().UTC()
+		startOfDay := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
+		result := s.db.Model(&model.User{}).
+			Where("id = ? AND email_verified = ? AND type = ? AND (last_points_date IS NULL OR last_points_date < ?)",
+				user.ID, true, model.UserTypeNormal, startOfDay).
+			Updates(map[string]interface{}{
+				"points":           gorm.Expr("points + ?", s.dailyLoginPoints),
+				"last_points_date": now,
+			})
+		if result.Error == nil && result.RowsAffected > 0 {
+			user.Points += s.dailyLoginPoints
+			user.LastPointsDate = &now
+		}
 	}
 
 	session, err := s.createSession(user.ID)

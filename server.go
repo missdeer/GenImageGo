@@ -28,16 +28,17 @@ type Server struct {
 }
 
 type ServerConfig struct {
-	APIService    string
-	Model         string
-	TextModel     string
-	BaseURL       string
-	APIKey        string
-	ModelSource   string
-	BaseURLSource string
-	APIKeySource  string
-	SMTP          *SMTPConfig
-	BaseWebURL    string
+	APIService       string
+	Model            string
+	TextModel        string
+	BaseURL          string
+	APIKey           string
+	ModelSource      string
+	BaseURLSource    string
+	APIKeySource     string
+	SMTP             *SMTPConfig
+	BaseWebURL       string
+	DailyLoginPoints int
 }
 
 func NewServer(addr, staticDir string, config ServerConfig, db *gorm.DB) *Server {
@@ -61,7 +62,7 @@ func NewServer(addr, staticDir string, config ServerConfig, db *gorm.DB) *Server
 		EnhancePromptText: enhancePromptText,
 	})
 
-	authService := auth.NewService(db)
+	authService := auth.NewService(db, config.DailyLoginPoints)
 
 	var mailService *mail.Service
 	if config.SMTP != nil && config.SMTP.Host != "" {
