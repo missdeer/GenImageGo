@@ -33,6 +33,10 @@
                     <label for="confirm-password">确认密码</label>
                     <input type="password" id="confirm-password" name="confirm-password" required autocomplete="new-password" placeholder="再次输入密码">
                 </div>
+                <div class="form-group">
+                    <label for="referral-code">推荐码（选填）</label>
+                    <input type="text" id="referral-code" name="referral-code" autocomplete="off" placeholder="如有推荐码请填写，可获得100积分" maxlength="8" style="text-transform: uppercase;">
+                </div>
                 <div id="error-message" class="error-message"></div>
                 <button type="submit" class="auth-button" id="submit-btn">
                     <span class="btn-text">注册</span>
@@ -57,6 +61,7 @@
             const email = document.getElementById('email').value.trim();
             const password = document.getElementById('password').value;
             const confirmPassword = document.getElementById('confirm-password').value;
+            const referralCode = document.getElementById('referral-code').value.trim().toUpperCase();
 
             if (password.length < 6) {
                 showError('密码长度至少为 6 个字符');
@@ -73,7 +78,7 @@
                 return;
             }
 
-            await handleRegister(email, password);
+            await handleRegister(email, password, referralCode);
         });
     </script>
 </body>

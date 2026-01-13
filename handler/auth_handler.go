@@ -25,8 +25,9 @@ func NewAuthHandler(authService *auth.Service, mailService *mail.Service, baseWe
 }
 
 type registerRequest struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
+	Email        string `json:"email"`
+	Password     string `json:"password"`
+	ReferralCode string `json:"referral_code"`
 }
 
 type loginRequest struct {
@@ -76,11 +77,13 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, session, err := h.authService.Register(req.Email, req.Password)
+	user, session, err := h.authService.Register(req.Email, req.Password, req.ReferralCode)
 	if err != nil {
 		status := http.StatusBadRequest
 		if err == auth.ErrEmailExists {
 			status = http.StatusConflict
+		} else if err == auth.ErrReferralCodeInvalid {
+			status = http.StatusBadRequest
 		}
 		writeJSON(w, status, errorResponse{Error: err.Error()})
 		return
@@ -334,4 +337,70 @@ func writeJSON(w http.ResponseWriter, status int, v interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	json.NewEncoder(w).Encode(v)
+}
+
+type changePasswordRequest struct {
+	CurrentPassword string `json:"current_password"`
+	NewPassword     string `json:"new_password"`
+}
+
+func (h *AuthHandler) Profile(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	user := auth.GetUserFromContext(r.Context())
+	if user == nil {
+		writeJSON(w, http.StatusUnauthorized, errorResponse{Error: "未授权访问"})
+		return
+	}
+
+	if _, err := h.authService.EnsureUserReferralCode(user.ID); err != nil {
+		writeJSON(w, http.StatusInternalServerError, errorResponse{Error: "获取推荐码失败"})
+		return
+	}
+
+	profile, err := h.authService.GetUserProfile(user.ID)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, errorResponse{Error: "获取用户信息失败"})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, profile)
+}
+
+func (h *AuthHandler) ChangePassword(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	user := auth.GetUserFromContext(r.Context())
+	if user == nil {
+		writeJSON(w, http.StatusUnauthorized, errorResponse{Error: "未授权访问"})
+		return
+	}
+
+	var req changePasswordRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSON(w, http.StatusBadRequest, errorResponse{Error: "无效的请求格式"})
+		return
+	}
+
+	if err := h.authService.ChangePassword(user.ID, req.CurrentPassword, req.NewPassword); err != nil {
+		writeJSON(w, http.StatusBadRequest, errorResponse{Error: err.Error()})
+		return
+	}
+
+	http.SetCookie(w, &http.Cookie{
+		Name:     auth.SessionCookieName,
+		Value:    "",
+		Path:     "/",
+		MaxAge:   -1,
+		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
+	})
+
+	writeJSON(w, http.StatusOK, map[string]string{"status": "ok", "message": "密码修改成功，请重新登录"})
 }

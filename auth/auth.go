@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"regexp"
+	"strings"
 	"time"
 
 	"genimage/model"
@@ -18,6 +19,8 @@ const (
 	sessionTokenLen           = 32
 	resetTokenLen             = 32
 	verificationTokenLen      = 32
+	referralCodeLen           = 8
+	referralBonus             = 100
 	sessionDuration           = 7 * 24 * time.Hour
 	resetTokenDuration        = 1 * time.Hour
 	verificationTokenDuration = 1 * time.Hour
@@ -39,9 +42,24 @@ var (
 	ErrVerificationTokenInvalid = errors.New("验证链接无效或已过期")
 	ErrVerificationTokenUsed    = errors.New("验证链接已被使用")
 	ErrEmailAlreadyVerified     = errors.New("邮箱已验证")
+	ErrReferralCodeInvalid      = errors.New("推荐码无效")
+	ErrCurrentPasswordWrong     = errors.New("当前密码错误")
 )
 
 var emailRegex = regexp.MustCompile(`^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`)
+
+const referralCodeChars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+
+func generateReferralCode() (string, error) {
+	b := make([]byte, referralCodeLen)
+	if _, err := rand.Read(b); err != nil {
+		return "", err
+	}
+	for i := range b {
+		b[i] = referralCodeChars[int(b[i])%len(referralCodeChars)]
+	}
+	return string(b), nil
+}
 
 func validatePasswordComplexity(password string) bool {
 	var hasUpper, hasLower, hasDigit bool
@@ -58,6 +76,37 @@ func validatePasswordComplexity(password string) bool {
 	return hasUpper && hasLower && hasDigit
 }
 
+// isUniqueConstraintError checks if err is a unique constraint violation across different databases
+func isUniqueConstraintError(err error) bool {
+	if err == nil {
+		return false
+	}
+	// Check for GORM's translated error
+	if errors.Is(err, gorm.ErrDuplicatedKey) {
+		return true
+	}
+	errStr := strings.ToLower(err.Error())
+	// SQLite: "UNIQUE constraint failed"
+	// MySQL: "Duplicate entry"
+	// PostgreSQL: "duplicate key value violates unique constraint"
+	return strings.Contains(errStr, "unique constraint") ||
+		strings.Contains(errStr, "duplicate entry") ||
+		strings.Contains(errStr, "duplicate key")
+}
+
+// isEmailUniqueError checks if the unique constraint error is for the email field
+func isEmailUniqueError(err error) bool {
+	if err == nil {
+		return false
+	}
+	errStr := strings.ToLower(err.Error())
+	// Check for email field name in error message
+	// Different databases may include column name, constraint name, or table.column
+	return strings.Contains(errStr, "email") ||
+		strings.Contains(errStr, "users.email") ||
+		strings.Contains(errStr, "idx_users_email")
+}
+
 type Service struct {
 	db               *gorm.DB
 	dailyLoginPoints int
@@ -67,7 +116,7 @@ func NewService(db *gorm.DB, dailyLoginPoints int) *Service {
 	return &Service{db: db, dailyLoginPoints: dailyLoginPoints}
 }
 
-func (s *Service) Register(email, password string) (*model.User, *model.Session, error) {
+func (s *Service) Register(email, password, referralCode string) (*model.User, *model.Session, error) {
 	if !emailRegex.MatchString(email) {
 		return nil, nil, ErrEmailInvalid
 	}
@@ -78,25 +127,113 @@ func (s *Service) Register(email, password string) (*model.User, *model.Session,
 		return nil, nil, ErrPasswordTooWeak
 	}
 
-	var existing model.User
-	if err := s.db.Where("email = ?", email).First(&existing).Error; err == nil {
-		return nil, nil, ErrEmailExists
-	}
+	// Normalize referral code to uppercase
+	referralCode = strings.ToUpper(strings.TrimSpace(referralCode))
 
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcryptCost)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	user := &model.User{
-		Email:        email,
-		PasswordHash: string(hash),
-	}
-	if err := s.db.Create(user).Error; err != nil {
-		return nil, nil, err
-	}
+	var user *model.User
+	var session *model.Session
 
-	session, err := s.createSession(user.ID)
+	err = s.db.Transaction(func(tx *gorm.DB) error {
+		// Check email existence within transaction
+		var existing model.User
+		if err := tx.Where("email = ?", email).First(&existing).Error; err == nil {
+			return ErrEmailExists
+		} else if !errors.Is(err, gorm.ErrRecordNotFound) {
+			return err
+		}
+
+		// Validate referrer inside transaction
+		var referrerID *uint
+		if referralCode != "" {
+			var referrer model.User
+			if err := tx.Where("referral_code = ?", referralCode).First(&referrer).Error; err != nil {
+				if errors.Is(err, gorm.ErrRecordNotFound) {
+					return ErrReferralCodeInvalid
+				}
+				return err
+			}
+			referrerID = &referrer.ID
+		}
+
+		// Generate unique referral code with retry, including handling unique constraint violations
+		var newReferralCode string
+		var createErr error
+		for attempt := 0; attempt < 10; attempt++ {
+			code, err := generateReferralCode()
+			if err != nil {
+				return err
+			}
+			var count int64
+			if err := tx.Model(&model.User{}).Where("referral_code = ?", code).Count(&count).Error; err != nil {
+				return err
+			}
+			if count == 0 {
+				newReferralCode = code
+			} else {
+				continue
+			}
+
+			user = &model.User{
+				Email:        email,
+				PasswordHash: string(hash),
+				ReferralCode: newReferralCode,
+				ReferredBy:   referrerID,
+			}
+			createErr = tx.Create(user).Error
+			if createErr == nil {
+				break
+			}
+
+			// Check if it's a unique constraint violation
+			if isUniqueConstraintError(createErr) {
+				// Distinguish between email and referral_code collision
+				if isEmailUniqueError(createErr) {
+					return ErrEmailExists
+				}
+				// referral_code collision - retry with new code
+				user = nil
+				continue
+			}
+			return createErr
+		}
+		if user == nil {
+			if createErr != nil {
+				return createErr
+			}
+			return errors.New("无法生成推荐码")
+		}
+
+		// Award referral bonus within the same transaction
+		if referrerID != nil {
+			if err := tx.Model(&model.User{}).Where("id = ?", *referrerID).Update("points", gorm.Expr("points + ?", referralBonus)).Error; err != nil {
+				return err
+			}
+			if err := tx.Model(&model.User{}).Where("id = ?", user.ID).Update("points", gorm.Expr("points + ?", referralBonus)).Error; err != nil {
+				return err
+			}
+			user.Points = referralBonus
+		}
+
+		// Create session within transaction
+		tokenBytes := make([]byte, sessionTokenLen)
+		if _, err := rand.Read(tokenBytes); err != nil {
+			return err
+		}
+
+		session = &model.Session{
+			Token:     hex.EncodeToString(tokenBytes),
+			UserID:    user.ID,
+			ExpiresAt: time.Now().Add(sessionDuration),
+		}
+
+		return tx.Create(session).Error
+	})
+
 	if err != nil {
 		return nil, nil, err
 	}
@@ -418,4 +555,158 @@ func (s *Service) GetAdminPermissions(userID uint) (*AdminPermissions, error) {
 
 func (s *Service) DB() *gorm.DB {
 	return s.db
+}
+
+func (s *Service) ChangePassword(userID uint, currentPassword, newPassword string) error {
+	if len(newPassword) < minPasswordLen {
+		return ErrPasswordTooShort
+	}
+	if !validatePasswordComplexity(newPassword) {
+		return ErrPasswordTooWeak
+	}
+
+	var user model.User
+	if err := s.db.First(&user, userID).Error; err != nil {
+		return err
+	}
+
+	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(currentPassword)); err != nil {
+		return ErrCurrentPasswordWrong
+	}
+
+	hash, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcryptCost)
+	if err != nil {
+		return err
+	}
+
+	if err := s.db.Model(&user).Update("password_hash", string(hash)).Error; err != nil {
+		return err
+	}
+
+	s.db.Where("user_id = ?", userID).Delete(&model.Session{})
+
+	return nil
+}
+
+type UserOrganization struct {
+	ID   uint   `json:"id"`
+	Name string `json:"name"`
+	Role string `json:"role"`
+}
+
+type UserProfile struct {
+	ID            uint               `json:"id"`
+	Email         string             `json:"email"`
+	EmailVerified bool               `json:"email_verified"`
+	Points        int                `json:"points"`
+	ReferralCode  string             `json:"referral_code"`
+	Type          model.UserType     `json:"type"`
+	CreatedAt     string             `json:"created_at"`
+	Organizations []UserOrganization `json:"organizations"`
+}
+
+func (s *Service) GetUserProfile(userID uint) (*UserProfile, error) {
+	var user model.User
+	if err := s.db.First(&user, userID).Error; err != nil {
+		return nil, err
+	}
+
+	var memberships []model.Membership
+	if err := s.db.Preload("Organization").Where("user_id = ?", userID).Find(&memberships).Error; err != nil {
+		return nil, err
+	}
+
+	orgs := make([]UserOrganization, 0, len(memberships))
+	for _, m := range memberships {
+		if m.Organization != nil {
+			orgs = append(orgs, UserOrganization{
+				ID:   m.Organization.ID,
+				Name: m.Organization.Name,
+				Role: m.Role.String(),
+			})
+		}
+	}
+
+	return &UserProfile{
+		ID:            user.ID,
+		Email:         user.Email,
+		EmailVerified: user.EmailVerified,
+		Points:        user.Points,
+		ReferralCode:  user.ReferralCode,
+		Type:          user.Type,
+		CreatedAt:     user.CreatedAt.Format("2006-01-02"),
+		Organizations: orgs,
+	}, nil
+}
+
+func (s *Service) EnsureUserReferralCode(userID uint) (string, error) {
+	var user model.User
+	if err := s.db.First(&user, userID).Error; err != nil {
+		return "", err
+	}
+
+	if user.ReferralCode != "" {
+		return user.ReferralCode, nil
+	}
+
+	var newCode string
+	err := s.db.Transaction(func(tx *gorm.DB) error {
+		// Re-check within transaction
+		var u model.User
+		if err := tx.First(&u, userID).Error; err != nil {
+			return err
+		}
+		if u.ReferralCode != "" {
+			newCode = u.ReferralCode
+			return nil
+		}
+
+		// Try multiple times in case of unique constraint violations
+		var updateErr error
+		for attempt := 0; attempt < 10; attempt++ {
+			code, err := generateReferralCode()
+			if err != nil {
+				return err
+			}
+			var count int64
+			if err := tx.Model(&model.User{}).Where("referral_code = ?", code).Count(&count).Error; err != nil {
+				return err
+			}
+			if count > 0 {
+				continue
+			}
+
+			// Conditional update to prevent overwrite in case of concurrent calls
+			result := tx.Model(&model.User{}).Where("id = ? AND (referral_code = '' OR referral_code IS NULL)", userID).Update("referral_code", code)
+			updateErr = result.Error
+			if updateErr != nil {
+				// Check if unique constraint violation, retry with new code
+				if isUniqueConstraintError(updateErr) {
+					continue
+				}
+				return updateErr
+			}
+			if result.RowsAffected == 0 {
+				// Another goroutine already set it, re-fetch
+				if err := tx.First(&u, userID).Error; err != nil {
+					return err
+				}
+				newCode = u.ReferralCode
+				return nil
+			}
+			newCode = code
+			return nil
+		}
+
+		if updateErr != nil {
+			return updateErr
+		}
+		return errors.New("无法生成推荐码")
+	})
+
+	if err != nil {
+		return "", err
+	}
+
+	return newCode, nil
 }

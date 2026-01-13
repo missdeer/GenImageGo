@@ -112,6 +112,8 @@ func (s *Server) Start() error {
 	mux.HandleFunc("/api/auth/login", s.authHandler.Login)
 	mux.HandleFunc("/api/auth/logout", s.authHandler.Logout)
 	mux.HandleFunc("/api/auth/me", s.authHandler.Me)
+	mux.HandleFunc("/api/auth/profile", s.authHandler.Profile)
+	mux.HandleFunc("/api/auth/change-password", s.authHandler.ChangePassword)
 	mux.HandleFunc("/api/auth/forgot-password", s.authHandler.ForgotPassword)
 	mux.HandleFunc("/api/auth/validate-reset-token", s.authHandler.ValidateResetToken)
 	mux.HandleFunc("/api/auth/reset-password", s.authHandler.ResetPassword)
@@ -145,6 +147,7 @@ func (s *Server) Start() error {
 	mux.HandleFunc("/forgot-password", serveHTML("forgot-password.html"))
 	mux.HandleFunc("/reset-password", serveHTML("reset-password.html"))
 	mux.HandleFunc("/verify-pending", serveHTML("verify-pending.html"))
+	mux.HandleFunc("/profile", serveHTML("profile.html"))
 	mux.HandleFunc("/admin/users", serveHTML("admin/users.html"))
 	mux.HandleFunc("/admin/organizations", serveHTML("admin/organizations.html"))
 
@@ -154,6 +157,7 @@ func (s *Server) Start() error {
 		"/forgot-password.html": "/forgot-password",
 		"/reset-password.html":  "/reset-password",
 		"/verify-pending.html":  "/verify-pending",
+		"/profile.html":         "/profile",
 		"/index.html":           "/",
 	}
 

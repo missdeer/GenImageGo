@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>个人资料 - Image Go</title>
+    <link rel="stylesheet" href="css/variables.css">
+    <link rel="stylesheet" href="css/auth.css">
+    <script>
+        (function() {
+            const theme = localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-theme', theme);
+        })();
+    </script>
+    <style>
+        .profile-card {
+            max-width: 480px;
+        }
+        .profile-section {
+            margin-bottom: 24px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--border-color, #e0e0e0);
+        }
+        .profile-section:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+        }
+        .section-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-secondary, #666);
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .profile-info {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+        }
+        .info-label {
+            color: var(--text-secondary, #666);
+            font-size: 14px;
+        }
+        .info-value {
+            color: var(--text-primary, #333);
+            font-weight: 500;
+            font-size: 14px;
+        }
+        .referral-code {
+            font-family: monospace;
+            font-size: 18px;
+            font-weight: 700;
+            letter-spacing: 2px;
+            padding: 12px 16px;
+            background: var(--bg-secondary, #f5f5f5);
+            border-radius: 8px;
+            text-align: center;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .referral-code:hover {
+            background: var(--bg-hover, #e8e8e8);
+        }
+        .referral-hint {
+            font-size: 12px;
+            color: var(--text-secondary, #888);
+            text-align: center;
+            margin-top: 8px;
+        }
+        .org-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .org-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 12px;
+            background: var(--bg-secondary, #f5f5f5);
+            border-radius: 6px;
+        }
+        .org-name {
+            font-weight: 500;
+        }
+        .org-role {
+            font-size: 12px;
+            padding: 2px 8px;
+            background: var(--primary-color, #4a90d9);
+            color: white;
+            border-radius: 4px;
+        }
+        .no-org {
+            color: var(--text-secondary, #888);
+            font-style: italic;
+            text-align: center;
+            padding: 16px;
+        }
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--primary-color, #4a90d9);
+            text-decoration: none;
+            font-size: 14px;
+            margin-bottom: 16px;
+        }
+        .back-link:hover {
+            text-decoration: underline;
+        }
+        .success-message {
+            color: #22c55e;
+            font-size: 14px;
+            margin-top: 8px;
+            display: none;
+        }
+        .password-form {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="auth-container">
+        <div class="auth-card profile-card">
+            <a href="/" class="back-link">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 12H5M12 19l-7-7 7-7"/>
+                </svg>
+                返回首页
+            </a>
+            <div class="auth-header">
+                <h1>个人资料</h1>
+                <p id="user-email">加载中...</p>
+            </div>
+
+            <div class="profile-section">
+                <div class="section-title">基本信息</div>
+                <div class="profile-info">
+                    <div class="info-row">
+                        <span class="info-label">邮箱</span>
+                        <span class="info-value" id="profile-email">-</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">积分</span>
+                        <span class="info-value" id="profile-points">-</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">注册时间</span>
+                        <span class="info-value" id="profile-created">-</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="profile-section">
+                <div class="section-title">我的推荐码</div>
+                <div class="referral-code" id="referral-code" onclick="copyReferralCode()">-</div>
+                <div class="referral-hint">点击复制推荐码，分享给好友注册可各获得 100 积分</div>
+            </div>
+
+            <div class="profile-section">
+                <div class="section-title">所属组织</div>
+                <div class="org-list" id="org-list">
+                    <div class="no-org">加载中...</div>
+                </div>
+            </div>
+
+            <div class="profile-section">
+                <div class="section-title">修改密码</div>
+                <form class="password-form" id="password-form">
+                    <div class="form-group">
+                        <label for="current-password">当前密码</label>
+                        <input type="password" id="current-password" required autocomplete="current-password" placeholder="请输入当前密码">
+                    </div>
+                    <div class="form-group">
+                        <label for="new-password">新密码</label>
+                        <input type="password" id="new-password" required autocomplete="new-password" placeholder="至少6位，含大小写字母和数字">
+                    </div>
+                    <div class="form-group">
+                        <label for="confirm-password">确认新密码</label>
+                        <input type="password" id="confirm-password" required autocomplete="new-password" placeholder="再次输入新密码">
+                    </div>
+                    <div id="error-message" class="error-message"></div>
+                    <div id="success-message" class="success-message"></div>
+                    <button type="submit" class="auth-button" id="submit-btn">
+                        <span class="btn-text">修改密码</span>
+                        <span class="btn-loading" style="display:none;">修改中...</span>
+                    </button>
+                </form>
+            </div>
+        </div>
+        <div class="theme-toggle" onclick="toggleTheme()">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="5"></circle>
+                <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"></path>
+            </svg>
+        </div>
+    </div>
+    <script src="js/auth.js"></script>
+    <script>
+        let profileData = null;
+
+        async function loadProfile() {
+            try {
+                const resp = await fetch('/api/auth/profile');
+                if (!resp.ok) {
+                    if (resp.status === 401) {
+                        window.location.href = '/login';
+                        return;
+                    }
+                    throw new Error('Failed to load profile');
+                }
+                profileData = await resp.json();
+                renderProfile(profileData);
+            } catch (e) {
+                console.error('Failed to load profile:', e);
+            }
+        }
+
+        function renderProfile(data) {
+            document.getElementById('user-email').textContent = data.email;
+            document.getElementById('profile-email').textContent = data.email;
+            document.getElementById('profile-points').textContent = data.points + ' 积分';
+            document.getElementById('profile-created').textContent = data.created_at;
+            document.getElementById('referral-code').textContent = data.referral_code || '生成中...';
+
+            const orgList = document.getElementById('org-list');
+            if (data.organizations && data.organizations.length > 0) {
+                orgList.innerHTML = data.organizations.map(org => `
+                    <div class="org-item">
+                        <span class="org-name">${escapeHtml(org.name)}</span>
+                        <span class="org-role">${escapeHtml(org.role)}</span>
+                    </div>
+                `).join('');
+            } else {
+                orgList.innerHTML = '<div class="no-org">暂未加入任何组织</div>';
+            }
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function copyReferralCode() {
+            const code = document.getElementById('referral-code').textContent;
+            if (code && code !== '-' && code !== '生成中...') {
+                navigator.clipboard.writeText(code).then(() => {
+                    const el = document.getElementById('referral-code');
+                    const original = el.textContent;
+                    el.textContent = '已复制!';
+                    setTimeout(() => el.textContent = original, 1500);
+                });
+            }
+        }
+
+        document.getElementById('password-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const currentPassword = document.getElementById('current-password').value;
+            const newPassword = document.getElementById('new-password').value;
+            const confirmPassword = document.getElementById('confirm-password').value;
+
+            const errorEl = document.getElementById('error-message');
+            const successEl = document.getElementById('success-message');
+            errorEl.style.display = 'none';
+            successEl.style.display = 'none';
+
+            if (newPassword !== confirmPassword) {
+                errorEl.textContent = '两次输入的密码不一致';
+                errorEl.style.display = 'block';
+                return;
+            }
+
+            const btn = document.getElementById('submit-btn');
+            btn.querySelector('.btn-text').style.display = 'none';
+            btn.querySelector('.btn-loading').style.display = 'inline';
+            btn.disabled = true;
+
+            try {
+                const resp = await fetch('/api/auth/change-password', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': getCSRFToken()
+                    },
+                    body: JSON.stringify({
+                        current_password: currentPassword,
+                        new_password: newPassword
+                    })
+                });
+
+                const data = await resp.json();
+
+                if (resp.ok) {
+                    successEl.textContent = data.message || '密码修改成功，即将跳转到登录页...';
+                    successEl.style.display = 'block';
+                    setTimeout(() => {
+                        window.location.href = '/login';
+                    }, 2000);
+                } else {
+                    errorEl.textContent = data.error || '修改失败';
+                    errorEl.style.display = 'block';
+                }
+            } catch (e) {
+                errorEl.textContent = '网络错误，请重试';
+                errorEl.style.display = 'block';
+            } finally {
+                btn.querySelector('.btn-text').style.display = 'inline';
+                btn.querySelector('.btn-loading').style.display = 'none';
+                btn.disabled = false;
+            }
+        });
+
+        function getCSRFToken() {
+            const match = document.cookie.match(/csrf_token=([^;]+)/);
+            return match ? match[1] : '';
+        }
+
+        loadProfile();
+    </script>
+</body>
+</html>

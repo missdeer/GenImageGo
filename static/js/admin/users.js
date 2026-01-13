@@ -175,7 +175,10 @@
                 try {
                     const resp = await fetch('/api/admin/users/toggle-disabled', {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
+                        headers: { 
+                            'Content-Type': 'application/json',
+                            'X-CSRF-Token': getCSRFToken()
+                        },
                         body: JSON.stringify({ user_id: userId, disabled: disabled })
                     });
                     const data = await resp.json();
@@ -197,7 +200,10 @@
                 try {
                     const resp = await fetch('/api/admin/users/delete', {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
+                        headers: { 
+                            'Content-Type': 'application/json',
+                            'X-CSRF-Token': getCSRFToken()
+                        },
                         body: JSON.stringify({ user_id: userId })
                     });
                     const data = await resp.json();
@@ -234,7 +240,10 @@
         try {
             const resp = await fetch('/api/admin/users/update-points', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': getCSRFToken()
+                },
                 body: JSON.stringify({ user_id: pointsModalUser.id, points: points })
             });
             const data = await resp.json();
@@ -377,7 +386,10 @@
         try {
             const resp = await fetch('/api/admin/users/update-memberships', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': getCSRFToken()
+                },
                 body: JSON.stringify(payload)
             });
             const data = await resp.json();

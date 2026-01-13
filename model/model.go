@@ -55,6 +55,8 @@ type User struct {
 	Type           UserType       `gorm:"default:0" json:"type"`
 	Points         int            `gorm:"default:0" json:"points"`
 	LastPointsDate *time.Time     `gorm:"index" json:"-"`
+	ReferralCode   string         `gorm:"uniqueIndex;size:8" json:"referral_code,omitempty"`
+	ReferredBy     *uint          `gorm:"index" json:"-"`
 	Memberships    []Membership   `gorm:"foreignKey:UserID" json:"memberships,omitempty"`
 }
 

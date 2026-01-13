@@ -19,7 +19,7 @@ func setupTestDB(t *testing.T) *model.User {
 	})
 
 	svc := NewService(db, 0)
-	user, _, err := svc.Register("test@example.com", "Password123")
+	user, _, err := svc.Register("test@example.com", "Password123", "")
 	if err != nil {
 		t.Fatalf("failed to register test user: %v", err)
 	}
@@ -58,7 +58,7 @@ func TestRegister(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, _, err := svc.Register(tt.email, tt.password)
+			_, _, err := svc.Register(tt.email, tt.password, "")
 			if err != tt.wantErr {
 				t.Errorf("Register() error = %v, wantErr %v", err, tt.wantErr)
 			}
@@ -78,12 +78,12 @@ func TestRegisterDuplicate(t *testing.T) {
 
 	svc := NewService(db, 0)
 
-	_, _, err = svc.Register("test@example.com", "Password123")
+	_, _, err = svc.Register("test@example.com", "Password123", "")
 	if err != nil {
 		t.Fatalf("first register failed: %v", err)
 	}
 
-	_, _, err = svc.Register("test@example.com", "Password456")
+	_, _, err = svc.Register("test@example.com", "Password456", "")
 	if err != ErrEmailExists {
 		t.Errorf("expected ErrEmailExists, got %v", err)
 	}
@@ -101,7 +101,7 @@ func TestLogin(t *testing.T) {
 
 	svc := NewService(db, 0)
 
-	_, _, err = svc.Register("test@example.com", "Password123")
+	_, _, err = svc.Register("test@example.com", "Password123", "")
 	if err != nil {
 		t.Fatalf("register failed: %v", err)
 	}
@@ -139,7 +139,7 @@ func TestSessionValidation(t *testing.T) {
 
 	svc := NewService(db, 0)
 
-	user, session, err := svc.Register("test@example.com", "Password123")
+	user, session, err := svc.Register("test@example.com", "Password123", "")
 	if err != nil {
 		t.Fatalf("register failed: %v", err)
 	}
@@ -170,7 +170,7 @@ func TestLogout(t *testing.T) {
 
 	svc := NewService(db, 0)
 
-	_, session, err := svc.Register("test@example.com", "Password123")
+	_, session, err := svc.Register("test@example.com", "Password123", "")
 	if err != nil {
 		t.Fatalf("register failed: %v", err)
 	}
@@ -198,7 +198,7 @@ func TestCreatePasswordResetToken(t *testing.T) {
 
 	svc := NewService(db, 0)
 
-	_, _, err = svc.Register("test@example.com", "Password123")
+	_, _, err = svc.Register("test@example.com", "Password123", "")
 	if err != nil {
 		t.Fatalf("register failed: %v", err)
 	}
@@ -235,7 +235,7 @@ func TestValidatePasswordResetToken(t *testing.T) {
 
 	svc := NewService(db, 0)
 
-	user, _, err := svc.Register("test@example.com", "Password123")
+	user, _, err := svc.Register("test@example.com", "Password123", "")
 	if err != nil {
 		t.Fatalf("register failed: %v", err)
 	}
@@ -271,7 +271,7 @@ func TestResetPassword(t *testing.T) {
 
 	svc := NewService(db, 0)
 
-	_, _, err = svc.Register("test@example.com", "Password123")
+	_, _, err = svc.Register("test@example.com", "Password123", "")
 	if err != nil {
 		t.Fatalf("register failed: %v", err)
 	}
@@ -314,7 +314,7 @@ func TestResetPasswordValidation(t *testing.T) {
 
 	svc := NewService(db, 0)
 
-	_, _, err = svc.Register("test@example.com", "Password123")
+	_, _, err = svc.Register("test@example.com", "Password123", "")
 	if err != nil {
 		t.Fatalf("register failed: %v", err)
 	}
@@ -357,7 +357,7 @@ func TestDailyLoginPoints(t *testing.T) {
 
 	svc := NewService(db, 100)
 
-	user, _, err := svc.Register("points@example.com", "Password123")
+	user, _, err := svc.Register("points@example.com", "Password123", "")
 	if err != nil {
 		t.Fatalf("register failed: %v", err)
 	}
@@ -393,7 +393,7 @@ func TestDailyLoginPointsUnverifiedUser(t *testing.T) {
 
 	svc := NewService(db, 100)
 
-	_, _, err = svc.Register("unverified@example.com", "Password123")
+	_, _, err = svc.Register("unverified@example.com", "Password123", "")
 	if err != nil {
 		t.Fatalf("register failed: %v", err)
 	}

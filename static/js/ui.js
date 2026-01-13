@@ -210,15 +210,16 @@ function closeUserMenuOnClickOutside(e) {
 
 function showUserProfile() {
     closeUserMenu();
-    if (window.currentUser) {
-        showToast(`当前用户: ${window.currentUser.email}`, 'info');
-    }
+    window.location.href = '/profile';
 }
 
 async function handleLogout() {
     closeUserMenu();
     try {
-        await fetch('/api/auth/logout', { method: 'POST' });
+        await fetch('/api/auth/logout', { 
+            method: 'POST',
+            headers: { 'X-CSRF-Token': getCSRFToken() }
+        });
         window.location.href = '/login';
     } catch (e) {
         console.error('Logout failed:', e);

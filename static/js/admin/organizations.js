@@ -174,7 +174,10 @@
         try {
             const resp = await fetch('/api/admin/orgs/create', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': getCSRFToken()
+                },
                 body: JSON.stringify({ name, points })
             });
             const data = await resp.json();
@@ -223,7 +226,10 @@
         try {
             const resp = await fetch('/api/admin/orgs/update-name', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': getCSRFToken()
+                },
                 body: JSON.stringify({ organization_id: nameModalOrg.id, name })
             });
             const data = await resp.json();
@@ -246,7 +252,10 @@
         try {
             const resp = await fetch('/api/admin/orgs/update-points', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': getCSRFToken()
+                },
                 body: JSON.stringify({ organization_id: pointsModalOrg.id, points })
             });
             const data = await resp.json();
@@ -289,7 +298,10 @@
                 try {
                     const resp = await fetch('/api/admin/orgs/delete', {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
+                        headers: { 
+                            'Content-Type': 'application/json',
+                            'X-CSRF-Token': getCSRFToken()
+                        },
                         body: JSON.stringify({ organization_id: orgId })
                     });
                     const data = await resp.json();

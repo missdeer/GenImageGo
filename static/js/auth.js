@@ -43,7 +43,10 @@ async function handleLogin(email, password, rememberMe = false) {
     try {
         const resp = await fetch('/api/auth/login', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': getCSRFToken()
+            },
             body: JSON.stringify({ email, password, remember_me: rememberMe })
         });
 
@@ -65,15 +68,22 @@ async function handleLogin(email, password, rememberMe = false) {
     }
 }
 
-async function handleRegister(email, password) {
+async function handleRegister(email, password, referralCode = '') {
     hideError();
     setLoading(true);
 
     try {
+        const body = { email, password };
+        if (referralCode) {
+            body.referral_code = referralCode;
+        }
         const resp = await fetch('/api/auth/register', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, password })
+            headers: { 
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': getCSRFToken()
+            },
+            body: JSON.stringify(body)
         });
 
         const data = await resp.json();
@@ -122,4 +132,9 @@ function toggleTheme() {
     const next = current === 'dark' ? 'light' : 'dark';
     document.documentElement.setAttribute('data-theme', next);
     localStorage.setItem('theme', next);
+}
+
+function getCSRFToken() {
+    const match = document.cookie.match(/(?:^|;\s*)csrf_token=([^;]+)/);
+    return match ? decodeURIComponent(match[1]) : '';
 }
