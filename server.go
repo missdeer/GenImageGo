@@ -8,10 +8,12 @@ import (
 	"os/signal"
 	"strings"
 	"syscall"
+	"time"
 
 	"genimage/auth"
 	"genimage/handler"
 	"genimage/mail"
+	"genimage/middleware"
 
 	"gorm.io/gorm"
 )
@@ -40,6 +42,7 @@ type ServerConfig struct {
 	SMTP             *SMTPConfig
 	BaseWebURL       string
 	DailyLoginPoints int
+	SecureCookies    bool // Set to true for HTTPS production
 }
 
 func NewServer(addr, staticDir string, config ServerConfig, db *gorm.DB) *Server {
@@ -165,12 +168,34 @@ func (s *Server) Start() error {
 	}))
 
 	authMiddleware := auth.Middleware(s.authService)
-	wrappedHandler := authMiddleware(mux)
+
+	csrfMiddleware := middleware.CSRF(middleware.CSRFConfig{
+		AllowedOrigin: s.config.BaseWebURL,
+		Secure:        s.config.SecureCookies,
+	})
+
+	idempotencyMiddleware := middleware.Idempotency(s.db, middleware.IdempotencyConfig{
+		EnabledPaths: []string{"/generate-image", "/enhance-prompt"},
+	})
+
+	// Chain: Auth -> CSRF -> Idempotency -> Handler
+	wrappedHandler := authMiddleware(csrfMiddleware(idempotencyMiddleware(mux)))
 
 	s.httpServer = &http.Server{
 		Addr:    s.addr,
 		Handler: wrappedHandler,
 	}
+
+	// Start background cleanup for expired idempotency keys
+	go func() {
+		ticker := time.NewTicker(1 * time.Hour)
+		defer ticker.Stop()
+		for range ticker.C {
+			if err := middleware.CleanExpiredIdempotencyKeys(s.db); err != nil {
+				fmt.Printf("清理过期幂等键失败: %v\n", err)
+			}
+		}
+	}()
 
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)

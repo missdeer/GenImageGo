@@ -1,5 +1,18 @@
 function escapeHtml(text) { return text.replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[m])); }
 
+// CSRF Token 工具
+function getCSRFToken() {
+    const match = document.cookie.match(/(?:^|;\s*)csrf_token=([^;]+)/);
+    return match ? decodeURIComponent(match[1]) : '';
+}
+
+function csrfHeaders(extraHeaders = {}) {
+    return {
+        'X-CSRF-Token': getCSRFToken(),
+        ...extraHeaders
+    };
+}
+
 // 保存原生 fetch，绕过扩展拦截（修复 ERR_SSL_PROTOCOL_ERROR）
 const nativeFetch = window.fetch.bind(window);
 

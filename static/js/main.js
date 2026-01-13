@@ -178,7 +178,7 @@ let UI = {};
             console.log('enhancePrompt: sending request with text:', text);
             const resp = await fetch('/enhance-prompt', {
                 method: 'POST',
-                headers: { 'Content-Type': 'text/plain' },
+                headers: csrfHeaders({ 'Content-Type': 'text/plain' }),
                 body: text
             });
             console.log('enhancePrompt: response status:', resp.status, 'content-type:', resp.headers.get('content-type'));
@@ -424,9 +424,10 @@ let UI = {};
             const requestUrl = `${baseHost.replace(new RegExp('/$'),'')}/generate-image`;
 
             // 构建请求 headers
-            const requestHeaders = {
-                'Content-Type': 'application/json'
-            };
+            const requestHeaders = csrfHeaders({
+                'Content-Type': 'application/json',
+                'Idempotency-Key': crypto.randomUUID()
+            });
 
             const res = await nativeFetch(requestUrl, {
                 method: 'POST',

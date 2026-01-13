@@ -92,7 +92,10 @@ async function handleRegister(email, password) {
 
 async function handleLogout() {
     try {
-        await fetch('/api/auth/logout', { method: 'POST' });
+        await fetch('/api/auth/logout', {
+            method: 'POST',
+            headers: { 'X-CSRF-Token': getCSRFToken() }
+        });
         window.location.href = '/login';
     } catch (e) {
         console.error('Logout failed:', e);
