@@ -165,11 +165,14 @@ initTheme();
 
 // ===== 用户菜单 =====
 
-function toggleUserMenu(event) {
+function toggleUserMenu(targetOrEvent, maybeEvent) {
+    const event = maybeEvent || (targetOrEvent && typeof targetOrEvent.stopPropagation === 'function' ? targetOrEvent : null);
+    const target = (targetOrEvent && targetOrEvent.nodeType === 1) ? targetOrEvent :
+        (event ? event.currentTarget : null);
     if (event) {
         event.stopPropagation();
     }
-    const container = event?.currentTarget?.closest('.user-menu-container') ||
+    const container = target?.closest?.('.user-menu-container') ||
         document.querySelector('.user-menu-container');
     if (!container) return;
 
@@ -216,7 +219,7 @@ function showUserProfile() {
 async function handleLogout() {
     closeUserMenu();
     try {
-        await fetch('/api/auth/logout', { 
+        await fetch('/api/auth/logout', {
             method: 'POST',
             headers: { 'X-CSRF-Token': getCSRFToken() }
         });
@@ -226,3 +229,22 @@ async function handleLogout() {
         window.location.href = '/login';
     }
 }
+
+// ===== 事件委托系统 =====
+// 注册 UI 相关的动作处理器（注册表在 utils.js 中定义）
+window.App.Actions.registerAll({
+    'toggle-user-menu': (target, event) => toggleUserMenu(target, event),
+    'show-user-profile': () => showUserProfile(),
+    'logout': () => handleLogout(),
+    'toggle-theme': () => toggleTheme()
+});
+
+// 初始化事件委托监听器
+document.addEventListener('DOMContentLoaded', () => {
+    document.body.addEventListener('click', (e) => {
+        const target = e.target.closest('[data-action]');
+        if (target) {
+            window.App.Actions.dispatch(target.dataset.action, target, e);
+        }
+    });
+});

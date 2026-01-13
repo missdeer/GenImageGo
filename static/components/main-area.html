@@ -46,14 +46,14 @@
                             <div class="user-dropdown-email"></div>
                         </div>
                         <div class="user-dropdown-divider"></div>
-                        <div class="user-dropdown-item" onclick="showUserProfile()">
+                        <div class="user-dropdown-item" data-action="show-user-profile">
                             <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none">
                                 <circle cx="12" cy="8" r="4"></circle>
                                 <path d="M20 21a8 8 0 1 0-16 0"></path>
                             </svg>
                             <span>个人资料</span>
                         </div>
-                        <div class="user-dropdown-item user-dropdown-logout" onclick="handleLogout()">
+                        <div class="user-dropdown-item user-dropdown-logout" data-action="logout">
                             <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none">
                                 <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
                                 <polyline points="16 17 21 12 16 7"></polyline>

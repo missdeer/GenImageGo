@@ -137,7 +137,7 @@ let UI = {};
         if(window.innerWidth<=768)closeAllSidebars()
     })}
     
-    async function renderSessionList(){const sessions=await getAllSessions();if(UI.sessionList){UI.sessionList.innerHTML='';sessions.forEach(s=>{const div=document.createElement('div');div.className=`session-item ${s.id===currentSessionId?'active':''}`;if(activeGenerations.has(s.id))div.classList.add('generating');div.innerHTML=`<div style="display:flex; align-items:center; overflow:hidden; width:100%;"><span class="session-loading">⏳</span><span style="overflow:hidden; text-overflow:ellipsis;">${escapeHtml(s.title)}</span></div><div class="session-delete" onclick="event.stopPropagation(); removeSession(${s.id})">×</div>`;div.onclick=()=>loadSession(s.id);UI.sessionList.appendChild(div)})}}
+    async function renderSessionList(){const sessions=await getAllSessions();if(UI.sessionList){UI.sessionList.innerHTML='';sessions.forEach(s=>{const div=document.createElement('div');div.className=`session-item ${s.id===currentSessionId?'active':''}`;if(activeGenerations.has(s.id))div.classList.add('generating');div.innerHTML=`<div style="display:flex; align-items:center; overflow:hidden; width:100%;"><span class="session-loading">⏳</span><span style="overflow:hidden; text-overflow:ellipsis;">${escapeHtml(s.title)}</span></div><div class="session-delete" data-action="remove-session" data-session-id="${s.id}">×</div>`;div.dataset.action='load-session';div.dataset.sessionId=s.id;UI.sessionList.appendChild(div)})}}
     
     async function loadSession(sessionId){currentSessionId=sessionId;if(UI.chatHistory){UI.chatHistory.innerHTML='';UI.emptyState.style.display='none';}BlobManager.cleanup();renderSessionList();const messages=await getSessionMessages(sessionId);if(messages.length===0){if(UI.chatHistory)UI.chatHistory.appendChild(UI.emptyState);if(UI.emptyState)UI.emptyState.style.display='flex'}else{messages.forEach(msg=>appendMessageToUI(msg.role,msg.rawHtml,msg.content,msg.images,msg.id));if(UI.chatHistory)UI.chatHistory.scrollTop=UI.chatHistory.scrollHeight}if(activeGenerations.has(sessionId))appendMessageToUI('bot','<div class="loading-spinner" id="temp-loading" style="margin-left:20px;"></div>');if(window.innerWidth<=768)closeAllSidebars()}async function createNewSession(title="新对话"){const id=await createSession(title);await loadSession(id)}async function removeSession(id){if(!confirm('确定删除此对话？'))return;await deleteSession(id);if(id===currentSessionId){const sessions=await getAllSessions();if(sessions.length>0)await loadSession(sessions[0].id);else await createNewSession()}else{renderSessionList()}}
 
@@ -599,4 +599,26 @@ let UI = {};
         if(UI.sendBtn) UI.sendBtn.classList.toggle('active',hasText||hasImages);
         if(UI.enhanceBtn) UI.enhanceBtn.classList.toggle('active',hasText);
     }
-    async function handleFiles(files){if(state.images.length+files.length>14){alert("最多14张");return}for(let file of files){if(!file.type.startsWith('image/'))continue;state.images.push(await compressImage(file))}renderPreviews();checkInput();if(UI.fileInput)UI.fileInput.value=''}function renderPreviews(){if(UI.previewArea){UI.previewArea.innerHTML='';if(state.images.length>0){UI.previewArea.classList.add('has-images');state.images.forEach((img,i)=>{const div=document.createElement('div');div.className='preview-item';div.style.backgroundImage=`url(${img.preview})`;div.innerHTML=`<div class="preview-close" onclick="state.images.splice(${i},1);renderPreviews();checkInput()">×</div>`;UI.previewArea.appendChild(div)})}else UI.previewArea.classList.remove('has-images')}}
+    async function handleFiles(files){if(state.images.length+files.length>14){alert("最多14张");return}for(let file of files){if(!file.type.startsWith('image/'))continue;state.images.push(await compressImage(file))}renderPreviews();checkInput();if(UI.fileInput)UI.fileInput.value=''}function renderPreviews(){if(UI.previewArea){UI.previewArea.innerHTML='';if(state.images.length>0){UI.previewArea.classList.add('has-images');state.images.forEach((img,i)=>{const div=document.createElement('div');div.className='preview-item';div.style.backgroundImage=`url(${img.preview})`;div.innerHTML=`<div class="preview-close" data-action="remove-preview" data-index="${i}">×</div>`;UI.previewArea.appendChild(div)})}else UI.previewArea.classList.remove('has-images')}}
+
+    // 注册 main.js 相关的动作处理器（注册表在 utils.js 中定义）
+    window.App.Actions.registerAll({
+        'create-session': () => createNewSession(),
+        'remove-session': (target, event) => {
+            event.stopPropagation();
+            removeSession(parseInt(target.dataset.sessionId));
+        },
+        'load-session': (target) => loadSession(parseInt(target.dataset.sessionId)),
+        'remove-preview': (target) => {
+            const index = parseInt(target.dataset.index);
+            state.images.splice(index, 1);
+            renderPreviews();
+            checkInput();
+        },
+        'send-message': () => sendMessage(),
+        'enhance-prompt': () => enhancePrompt(),
+        'toggle-left-sidebar': () => toggleLeftSidebar(),
+        'toggle-settings': () => toggleSettings(),
+        'toggle-left-sidebar-desktop': () => toggleLeftSidebarDesktop(),
+        'toggle-right-sidebar-desktop': () => toggleRightSidebarDesktop()
+    });

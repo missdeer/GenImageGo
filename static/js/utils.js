@@ -93,3 +93,34 @@ function restoreSidebarState(){
 }
 
 document.addEventListener('DOMContentLoaded', () => setTimeout(restoreSidebarState, 100));
+
+// ===== 事件委托系统 - 动作注册表 =====
+// 在 utils.js 中定义（最先加载），供其他模块使用
+window.App = window.App || {};
+window.App.Actions = {
+    _registry: {},
+
+    register: function(name, handler) {
+        if (this._registry[name]) {
+            console.warn(`Action '${name}' is being overwritten.`);
+        }
+        this._registry[name] = handler;
+        return this;
+    },
+
+    registerAll: function(handlers) {
+        for (const [name, handler] of Object.entries(handlers)) {
+            this.register(name, handler);
+        }
+        return this;
+    },
+
+    dispatch: function(name, target, event) {
+        const handler = this._registry[name];
+        if (handler) {
+            handler(target, event);
+        } else {
+            console.warn(`No handler found for action: ${name}`);
+        }
+    }
+};
