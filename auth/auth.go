@@ -31,6 +31,7 @@ var (
 	ErrPasswordTooShort         = errors.New("密码长度至少为 6 个字符")
 	ErrPasswordTooWeak          = errors.New("密码必须包含大写字母、小写字母和数字")
 	ErrInvalidCredentials       = errors.New("邮箱或密码错误")
+	ErrUserDisabled             = errors.New("账号已被禁用")
 	ErrSessionExpired           = errors.New("会话已过期")
 	ErrSessionNotFound          = errors.New("会话不存在")
 	ErrResetTokenInvalid        = errors.New("重置链接无效或已过期")
@@ -129,6 +130,10 @@ func (s *Service) Login(email, password string) (*model.User, *model.Session, er
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password)); err != nil {
 		return nil, nil, ErrInvalidCredentials
+	}
+
+	if user.Disabled {
+		return nil, nil, ErrUserDisabled
 	}
 
 	if s.dailyLoginPoints > 0 && user.EmailVerified && user.Type == model.UserTypeNormal {
@@ -354,4 +359,63 @@ func (s *Service) VerifyEmail(token string) error {
 
 func (s *Service) CleanExpiredVerificationTokens() error {
 	return s.db.Where("expires_at < ? OR used = ?", time.Now(), true).Delete(&model.EmailVerificationToken{}).Error
+}
+
+type ManagedOrganization struct {
+	ID   uint   `json:"id"`
+	Name string `json:"name"`
+}
+
+type AdminPermissions struct {
+	CanManageUsers       bool                  `json:"can_manage_users"`
+	IsSuperAdmin         bool                  `json:"is_super_admin"`
+	ManagedOrganizations []ManagedOrganization `json:"managed_organizations,omitempty"`
+}
+
+func (s *Service) GetAdminPermissions(userID uint) (*AdminPermissions, error) {
+	var user model.User
+	if err := s.db.First(&user, userID).Error; err != nil {
+		return nil, err
+	}
+
+	if user.Type == model.UserTypeSuperAdmin {
+		return &AdminPermissions{
+			CanManageUsers:       true,
+			IsSuperAdmin:         true,
+			ManagedOrganizations: nil,
+		}, nil
+	}
+
+	var memberships []model.Membership
+	if err := s.db.Preload("Organization").Where("user_id = ? AND role = ?", userID, model.MemberRoleAdmin).Find(&memberships).Error; err != nil {
+		return nil, err
+	}
+
+	if len(memberships) == 0 {
+		return &AdminPermissions{
+			CanManageUsers:       false,
+			IsSuperAdmin:         false,
+			ManagedOrganizations: nil,
+		}, nil
+	}
+
+	orgs := make([]ManagedOrganization, 0, len(memberships))
+	for _, m := range memberships {
+		if m.Organization != nil {
+			orgs = append(orgs, ManagedOrganization{
+				ID:   m.Organization.ID,
+				Name: m.Organization.Name,
+			})
+		}
+	}
+
+	return &AdminPermissions{
+		CanManageUsers:       true,
+		IsSuperAdmin:         false,
+		ManagedOrganizations: orgs,
+	}, nil
+}
+
+func (s *Service) DB() *gorm.DB {
+	return s.db
 }

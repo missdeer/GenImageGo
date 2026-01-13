@@ -48,6 +48,21 @@ async function initApplication() {
         // Allow DOM to update before running init
         setTimeout(() => {
             window.initializeApp();
+            // Show admin section if user has permission
+            if (window.currentUser && window.currentUser.can_manage_users) {
+                const adminSection = document.getElementById('admin-section');
+                if (adminSection) {
+                    adminSection.style.display = 'block';
+                }
+                const userMenuAdmin = document.getElementById('user-menu-admin');
+                if (userMenuAdmin) {
+                    userMenuAdmin.style.display = 'flex';
+                }
+                const adminMenuDivider = document.getElementById('admin-menu-divider');
+                if (adminMenuDivider) {
+                    adminMenuDivider.style.display = 'block';
+                }
+            }
         }, 50);
     } else {
         console.error("window.initializeApp not found. Main logic not started.");

@@ -17,14 +17,15 @@ import (
 )
 
 type Server struct {
-	addr        string
-	staticDir   string
-	config      ServerConfig
-	httpServer  *http.Server
-	handler     *handler.Handler
-	authHandler *handler.AuthHandler
-	authService *auth.Service
-	db          *gorm.DB
+	addr         string
+	staticDir    string
+	config       ServerConfig
+	httpServer   *http.Server
+	handler      *handler.Handler
+	authHandler  *handler.AuthHandler
+	adminHandler *handler.AdminHandler
+	authService  *auth.Service
+	db           *gorm.DB
 }
 
 type ServerConfig struct {
@@ -81,15 +82,17 @@ func NewServer(addr, staticDir string, config ServerConfig, db *gorm.DB) *Server
 	}
 
 	authHandler := handler.NewAuthHandler(authService, mailService, baseWebURL)
+	adminHandler := handler.NewAdminHandler(authService)
 
 	return &Server{
-		addr:        addr,
-		staticDir:   staticDir,
-		config:      config,
-		handler:     h,
-		authHandler: authHandler,
-		authService: authService,
-		db:          db,
+		addr:         addr,
+		staticDir:    staticDir,
+		config:       config,
+		handler:      h,
+		authHandler:  authHandler,
+		adminHandler: adminHandler,
+		authService:  authService,
+		db:           db,
 	}
 }
 
@@ -115,6 +118,13 @@ func (s *Server) Start() error {
 	mux.HandleFunc("/generate-image", s.handler.GenerateImage)
 	mux.HandleFunc("/enhance-prompt", s.handler.EnhancePrompt)
 
+	mux.HandleFunc("/api/admin/users", s.adminHandler.ListUsers)
+	mux.HandleFunc("/api/admin/organizations", s.adminHandler.ListOrganizations)
+	mux.HandleFunc("/api/admin/users/toggle-disabled", s.adminHandler.ToggleUserDisabled)
+	mux.HandleFunc("/api/admin/users/update-points", s.adminHandler.UpdateUserPoints)
+	mux.HandleFunc("/api/admin/users/delete", s.adminHandler.DeleteUser)
+	mux.HandleFunc("/api/admin/users/update-memberships", s.adminHandler.UpdateUserMemberships)
+
 	serveHTML := func(filename string) http.HandlerFunc {
 		return func(w http.ResponseWriter, r *http.Request) {
 			r.URL.Path = "/" + filename
@@ -126,6 +136,7 @@ func (s *Server) Start() error {
 	mux.HandleFunc("/forgot-password", serveHTML("forgot-password.html"))
 	mux.HandleFunc("/reset-password", serveHTML("reset-password.html"))
 	mux.HandleFunc("/verify-pending", serveHTML("verify-pending.html"))
+	mux.HandleFunc("/admin/users", serveHTML("admin/users.html"))
 
 	htmlRedirects := map[string]string{
 		"/login.html":           "/login",

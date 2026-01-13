@@ -51,6 +51,7 @@ type User struct {
 	Email          string         `gorm:"uniqueIndex;size:100;not null" json:"email"`
 	PasswordHash   string         `gorm:"size:60;not null" json:"-"`
 	EmailVerified  bool           `gorm:"default:false" json:"email_verified"`
+	Disabled       bool           `gorm:"default:false" json:"disabled"`
 	Type           UserType       `gorm:"default:0" json:"type"`
 	Points         int            `gorm:"default:0" json:"points"`
 	LastPointsDate *time.Time     `gorm:"index" json:"-"`

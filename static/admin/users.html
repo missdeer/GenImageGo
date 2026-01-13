@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>用户管理 - Image Go</title>
+    <link rel="stylesheet" href="../css/variables.css">
+    <link rel="stylesheet" href="../css/auth.css">
+    <link rel="stylesheet" href="../css/admin.css">
+    <script>
+        (function() {
+            const theme = localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-theme', theme);
+        })();
+    </script>
+</head>
+<body>
+    <div class="admin-container">
+        <div class="admin-header">
+            <h1>用户管理</h1>
+            <a href="/" class="back-link">返回首页</a>
+        </div>
+
+        <div class="admin-toolbar">
+            <div class="search-box">
+                <input type="text" id="search-keyword" placeholder="搜索邮箱...">
+                <button id="search-btn" class="btn-primary">搜索</button>
+            </div>
+            <div class="filter-box">
+                <select id="org-filter">
+                    <option value="">全部组织</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="admin-content">
+            <div id="loading" class="loading">加载中...</div>
+            <div id="error-message" class="error-message"></div>
+            <div id="no-permission" class="no-permission" style="display:none;">
+                <p>您没有权限访问此页面</p>
+                <a href="/">返回首页</a>
+            </div>
+
+            <table id="users-table" class="users-table" style="display:none;">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>邮箱</th>
+                        <th>状态</th>
+                        <th>积分</th>
+                        <th>创建时间</th>
+                        <th>组织</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="users-tbody">
+                </tbody>
+            </table>
+
+            <div id="pagination" class="pagination" style="display:none;">
+                <button id="prev-btn" class="btn-secondary" disabled>上一页</button>
+                <span id="page-info">第 1 页 / 共 1 页</span>
+                <button id="next-btn" class="btn-secondary" disabled>下一页</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="theme-toggle" onclick="toggleTheme()">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="5"></circle>
+            <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"></path>
+        </svg>
+    </div>
+
+    <!-- 修改积分弹窗 -->
+    <div id="points-modal" class="admin-modal" style="display:none;">
+        <div class="admin-modal-content">
+            <div class="admin-modal-header">
+                <h3>修改积分</h3>
+                <span class="admin-modal-close" onclick="closePointsModal()">&times;</span>
+            </div>
+            <div class="admin-modal-body">
+                <p>用户: <span id="points-modal-email"></span></p>
+                <label for="points-input">积分:</label>
+                <input type="number" id="points-input" min="0" style="width:100%; padding:8px; margin-top:8px;">
+            </div>
+            <div class="admin-modal-footer">
+                <button class="btn-secondary" onclick="closePointsModal()">取消</button>
+                <button class="btn-primary" onclick="submitUpdatePoints()">确定</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 确认弹窗 -->
+    <div id="confirm-modal" class="admin-modal" style="display:none;">
+        <div class="admin-modal-content">
+            <div class="admin-modal-header">
+                <h3 id="confirm-modal-title">确认</h3>
+                <span class="admin-modal-close" onclick="closeConfirmModal()">&times;</span>
+            </div>
+            <div class="admin-modal-body">
+                <p id="confirm-modal-message"></p>
+            </div>
+            <div class="admin-modal-footer">
+                <button class="btn-secondary" onclick="closeConfirmModal()">取消</button>
+                <button id="confirm-modal-btn" class="btn-primary" onclick="confirmAction()">确定</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 组织管理弹窗 -->
+    <div id="orgs-modal" class="admin-modal" style="display:none;">
+        <div class="admin-modal-content" style="max-width:500px;">
+            <div class="admin-modal-header">
+                <h3>管理组织</h3>
+                <span class="admin-modal-close" onclick="window.closeOrgsModal()">&times;</span>
+            </div>
+            <div class="admin-modal-body">
+                <p>用户: <span id="orgs-modal-email"></span></p>
+                <div id="orgs-list" style="margin-top:16px;"></div>
+                <div id="add-org-section" style="margin-top:16px;display:none;">
+                    <select id="add-org-select" style="padding:8px;width:70%;border:1px solid var(--border-color);border-radius:6px;background:var(--bg-primary);color:var(--text-primary);">
+                        <option value="">选择组织...</option>
+                    </select>
+                    <button class="btn-primary" onclick="window.addOrgToList()" style="margin-left:8px;background:#10b981;min-width:60px;">添加</button>
+                </div>
+            </div>
+            <div class="admin-modal-footer">
+                <button class="btn-secondary" onclick="window.closeOrgsModal()">取消</button>
+                <button class="btn-primary" onclick="window.submitUpdateOrgs()">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="../js/auth.js"></script>
+    <script src="../js/admin/users.js?v=6"></script>
+</body>
+</html>

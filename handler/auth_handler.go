@@ -45,11 +45,14 @@ type resetPasswordRequest struct {
 }
 
 type userResponse struct {
-	ID            uint           `json:"id"`
-	Email         string         `json:"email"`
-	EmailVerified bool           `json:"email_verified"`
-	Type          model.UserType `json:"type"`
-	Points        int            `json:"points"`
+	ID                   uint                      `json:"id"`
+	Email                string                    `json:"email"`
+	EmailVerified        bool                      `json:"email_verified"`
+	Type                 model.UserType            `json:"type"`
+	Points               int                       `json:"points"`
+	CanManageUsers       bool                      `json:"can_manage_users"`
+	IsSuperAdmin         bool                      `json:"is_super_admin"`
+	ManagedOrganizations []auth.ManagedOrganization `json:"managed_organizations,omitempty"`
 }
 
 type errorResponse struct {
@@ -170,13 +173,27 @@ func (h *AuthHandler) Me(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeJSON(w, http.StatusOK, userResponse{
+	permissions, err := h.authService.GetAdminPermissions(user.ID)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, errorResponse{Error: "查询失败"})
+		return
+	}
+
+	resp := userResponse{
 		ID:            user.ID,
 		Email:         user.Email,
 		EmailVerified: user.EmailVerified,
 		Type:          user.Type,
 		Points:        user.Points,
-	})
+	}
+
+	if permissions != nil {
+		resp.CanManageUsers = permissions.CanManageUsers
+		resp.IsSuperAdmin = permissions.IsSuperAdmin
+		resp.ManagedOrganizations = permissions.ManagedOrganizations
+	}
+
+	writeJSON(w, http.StatusOK, resp)
 }
 
 func (h *AuthHandler) ForgotPassword(w http.ResponseWriter, r *http.Request) {
