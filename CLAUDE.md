@@ -56,3 +56,24 @@ GenImageGo is a CLI tool for AI image generation supporting multiple providers:
 - Standard Go formatting (`gofmt`)
 - Error messages in Chinese (用户向错误信息使用中文)
 - Wrap errors with `fmt.Errorf` and print to stderr
+
+## File editing on Windows (CRITICAL FIX)
+
+**ALWAYS use RELATIVE paths** for Read and Edit tools:
+
+✅ CORRECT:
+- Read("src/components/Button.tsx")
+- Edit("src/components/Button.tsx", ...)
+- Read("config/settings.json")
+- Edit("config/settings.json", ...)
+
+❌ INCORRECT:
+- Read("C:/Users/.../src/components/Button.tsx")
+- Edit("C:/Users/.../src/components/Button.tsx", ...)
+
+**Rules:**
+1. Use paths relative to your working directory
+2. Use the SAME exact path in Read and Edit
+3. Avoid absolute paths with forward slashes
+
+**If error persists:** Re-read with the SAME relative path.
