@@ -56,12 +56,28 @@
     </div>
     <script src="js/auth.js"></script>
     <script>
+        function normalizeReferralCode(raw) {
+            if (!raw) {
+                return '';
+            }
+            return raw.replace(/[^a-z0-9]/gi, '').toUpperCase().slice(0, 8);
+        }
+
+        // Auto-fill referral code from URL parameter
+        (function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const refCode = normalizeReferralCode(urlParams.get('ref'));
+            if (refCode) {
+                document.getElementById('referral-code').value = refCode;
+            }
+        })();
+
         document.getElementById('register-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             const email = document.getElementById('email').value.trim();
             const password = document.getElementById('password').value;
             const confirmPassword = document.getElementById('confirm-password').value;
-            const referralCode = document.getElementById('referral-code').value.trim().toUpperCase();
+            const referralCode = normalizeReferralCode(document.getElementById('referral-code').value);
 
             if (password.length < 6) {
                 showError('密码长度至少为 6 个字符');
