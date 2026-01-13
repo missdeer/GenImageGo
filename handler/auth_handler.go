@@ -45,13 +45,13 @@ type resetPasswordRequest struct {
 }
 
 type userResponse struct {
-	ID                   uint                      `json:"id"`
-	Email                string                    `json:"email"`
-	EmailVerified        bool                      `json:"email_verified"`
-	Type                 model.UserType            `json:"type"`
-	Points               int                       `json:"points"`
-	CanManageUsers       bool                      `json:"can_manage_users"`
-	IsSuperAdmin         bool                      `json:"is_super_admin"`
+	ID                   uint                       `json:"id"`
+	Email                string                     `json:"email"`
+	EmailVerified        bool                       `json:"email_verified"`
+	Type                 model.UserType             `json:"type"`
+	Points               int                        `json:"points"`
+	CanManageUsers       bool                       `json:"can_manage_users"`
+	IsSuperAdmin         bool                       `json:"is_super_admin"`
 	ManagedOrganizations []auth.ManagedOrganization `json:"managed_organizations,omitempty"`
 }
 

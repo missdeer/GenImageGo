@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"genimage/auth"
@@ -32,8 +33,8 @@ type userListItem struct {
 }
 
 type orgMembershipInfo struct {
-	ID   uint            `json:"id"`
-	Name string          `json:"name"`
+	ID   uint             `json:"id"`
+	Name string           `json:"name"`
 	Role model.MemberRole `json:"role"`
 }
 
@@ -470,7 +471,7 @@ func (h *AdminHandler) DeleteUser(w http.ResponseWriter, r *http.Request) {
 }
 
 type membershipUpdate struct {
-	OrganizationID uint            `json:"organization_id"`
+	OrganizationID uint             `json:"organization_id"`
 	Role           model.MemberRole `json:"role"`
 }
 
@@ -579,4 +580,386 @@ func (h *AdminHandler) UpdateUserMemberships(w http.ResponseWriter, r *http.Requ
 	}
 
 	writeJSON(w, http.StatusOK, map[string]interface{}{"status": "ok"})
+}
+
+type orgFullListItem struct {
+	ID          uint      `json:"id"`
+	Name        string    `json:"name"`
+	Points      int       `json:"points"`
+	MemberCount int64     `json:"member_count"`
+	CreatedAt   time.Time `json:"created_at"`
+}
+
+type listOrgsFullResponse struct {
+	Organizations []orgFullListItem `json:"organizations"`
+	Total         int64             `json:"total"`
+	Page          int               `json:"page"`
+	PageSize      int               `json:"page_size"`
+	TotalPages    int               `json:"total_pages"`
+}
+
+func (h *AdminHandler) ListOrgsForManagement(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "方法不允许", http.StatusMethodNotAllowed)
+		return
+	}
+
+	user := auth.GetUserFromContext(r.Context())
+	if user == nil {
+		writeJSON(w, http.StatusUnauthorized, errorResponse{Error: "未授权访问"})
+		return
+	}
+
+	permissions, err := h.authService.GetAdminPermissions(user.ID)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, errorResponse{Error: "查询失败"})
+		return
+	}
+	if !permissions.CanManageUsers {
+		writeJSON(w, http.StatusForbidden, errorResponse{Error: "无权限访问"})
+		return
+	}
+
+	page, _ := strconv.Atoi(r.URL.Query().Get("page"))
+	if page <= 0 {
+		page = 1
+	}
+
+	pageSize, _ := strconv.Atoi(r.URL.Query().Get("page_size"))
+	if pageSize <= 0 {
+		pageSize = 20
+	}
+	if pageSize > 100 {
+		pageSize = 100
+	}
+
+	keyword := r.URL.Query().Get("keyword")
+
+	db := h.authService.DB()
+
+	var allowedOrgIDs []uint
+	if !permissions.IsSuperAdmin {
+		for _, org := range permissions.ManagedOrganizations {
+			allowedOrgIDs = append(allowedOrgIDs, org.ID)
+		}
+		if len(allowedOrgIDs) == 0 {
+			writeJSON(w, http.StatusOK, listOrgsFullResponse{
+				Organizations: []orgFullListItem{},
+				Total:         0,
+				Page:          page,
+				PageSize:      pageSize,
+				TotalPages:    0,
+			})
+			return
+		}
+	}
+
+	query := db.Model(&model.Organization{})
+
+	if !permissions.IsSuperAdmin {
+		query = query.Where("id IN ?", allowedOrgIDs)
+	}
+
+	if keyword != "" {
+		query = query.Where("name LIKE ?", "%"+keyword+"%")
+	}
+
+	var total int64
+	if err := query.Count(&total).Error; err != nil {
+		writeJSON(w, http.StatusInternalServerError, errorResponse{Error: "查询失败"})
+		return
+	}
+
+	offset := (page - 1) * pageSize
+	var orgs []model.Organization
+	if err := query.Order("created_at DESC, id DESC").Offset(offset).Limit(pageSize).Find(&orgs).Error; err != nil {
+		writeJSON(w, http.StatusInternalServerError, errorResponse{Error: "查询失败"})
+		return
+	}
+
+	orgIDs := make([]uint, len(orgs))
+	for i, o := range orgs {
+		orgIDs[i] = o.ID
+	}
+
+	memberCounts := make(map[uint]int64)
+	if len(orgIDs) > 0 {
+		type countResult struct {
+			OrganizationID uint
+			Count          int64
+		}
+		var results []countResult
+		db.Model(&model.Membership{}).
+			Select("organization_id, count(*) as count").
+			Where("organization_id IN ?", orgIDs).
+			Group("organization_id").
+			Scan(&results)
+		for _, r := range results {
+			memberCounts[r.OrganizationID] = r.Count
+		}
+	}
+
+	items := make([]orgFullListItem, len(orgs))
+	for i, o := range orgs {
+		items[i] = orgFullListItem{
+			ID:          o.ID,
+			Name:        o.Name,
+			Points:      o.Points,
+			MemberCount: memberCounts[o.ID],
+			CreatedAt:   o.CreatedAt,
+		}
+	}
+
+	totalPages := int(total) / pageSize
+	if int(total)%pageSize > 0 {
+		totalPages++
+	}
+
+	writeJSON(w, http.StatusOK, listOrgsFullResponse{
+		Organizations: items,
+		Total:         total,
+		Page:          page,
+		PageSize:      pageSize,
+		TotalPages:    totalPages,
+	})
+}
+
+func (h *AdminHandler) CreateOrganization(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "方法不允许", http.StatusMethodNotAllowed)
+		return
+	}
+
+	user := auth.GetUserFromContext(r.Context())
+	if user == nil {
+		writeJSON(w, http.StatusUnauthorized, errorResponse{Error: "未授权访问"})
+		return
+	}
+
+	permissions, err := h.authService.GetAdminPermissions(user.ID)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, errorResponse{Error: "查询失败"})
+		return
+	}
+	if !permissions.IsSuperAdmin {
+		writeJSON(w, http.StatusForbidden, errorResponse{Error: "仅超级管理员可创建组织"})
+		return
+	}
+
+	var req struct {
+		Name   string `json:"name"`
+		Points int    `json:"points"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSON(w, http.StatusBadRequest, errorResponse{Error: "无效的请求格式"})
+		return
+	}
+
+	name := strings.TrimSpace(req.Name)
+	if name == "" {
+		writeJSON(w, http.StatusBadRequest, errorResponse{Error: "组织名称不能为空"})
+		return
+	}
+
+	if req.Points < 0 {
+		writeJSON(w, http.StatusBadRequest, errorResponse{Error: "积分不能为负数"})
+		return
+	}
+
+	org := model.Organization{
+		Name:   name,
+		Points: req.Points,
+	}
+
+	db := h.authService.DB()
+	if err := db.Create(&org).Error; err != nil {
+		if strings.Contains(err.Error(), "UNIQUE") || strings.Contains(err.Error(), "Duplicate") {
+			writeJSON(w, http.StatusBadRequest, errorResponse{Error: "组织名称已存在"})
+			return
+		}
+		writeJSON(w, http.StatusInternalServerError, errorResponse{Error: "创建失败"})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"status": "ok",
+		"organization": map[string]interface{}{
+			"id":     org.ID,
+			"name":   org.Name,
+			"points": org.Points,
+		},
+	})
+}
+
+func (h *AdminHandler) DeleteOrganization(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "方法不允许", http.StatusMethodNotAllowed)
+		return
+	}
+
+	user := auth.GetUserFromContext(r.Context())
+	if user == nil {
+		writeJSON(w, http.StatusUnauthorized, errorResponse{Error: "未授权访问"})
+		return
+	}
+
+	permissions, err := h.authService.GetAdminPermissions(user.ID)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, errorResponse{Error: "查询失败"})
+		return
+	}
+	if !permissions.IsSuperAdmin {
+		writeJSON(w, http.StatusForbidden, errorResponse{Error: "仅超级管理员可解散组织"})
+		return
+	}
+
+	var req struct {
+		OrganizationID uint `json:"organization_id"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSON(w, http.StatusBadRequest, errorResponse{Error: "无效的请求格式"})
+		return
+	}
+
+	if req.OrganizationID == 0 {
+		writeJSON(w, http.StatusBadRequest, errorResponse{Error: "组织ID无效"})
+		return
+	}
+
+	db := h.authService.DB()
+	var org model.Organization
+	if err := db.First(&org, req.OrganizationID).Error; err != nil {
+		writeJSON(w, http.StatusNotFound, errorResponse{Error: "组织不存在"})
+		return
+	}
+
+	err = db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Where("organization_id = ?", req.OrganizationID).Delete(&model.Membership{}).Error; err != nil {
+			return err
+		}
+		return tx.Delete(&org).Error
+	})
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, errorResponse{Error: "解散失败"})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]interface{}{"status": "ok"})
+}
+
+func (h *AdminHandler) UpdateOrganizationPoints(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "方法不允许", http.StatusMethodNotAllowed)
+		return
+	}
+
+	user := auth.GetUserFromContext(r.Context())
+	if user == nil {
+		writeJSON(w, http.StatusUnauthorized, errorResponse{Error: "未授权访问"})
+		return
+	}
+
+	permissions, err := h.authService.GetAdminPermissions(user.ID)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, errorResponse{Error: "查询失败"})
+		return
+	}
+	if !permissions.IsSuperAdmin {
+		writeJSON(w, http.StatusForbidden, errorResponse{Error: "仅超级管理员可修改组织积分"})
+		return
+	}
+
+	var req struct {
+		OrganizationID uint `json:"organization_id"`
+		Points         int  `json:"points"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSON(w, http.StatusBadRequest, errorResponse{Error: "无效的请求格式"})
+		return
+	}
+
+	if req.OrganizationID == 0 {
+		writeJSON(w, http.StatusBadRequest, errorResponse{Error: "组织ID无效"})
+		return
+	}
+
+	if req.Points < 0 {
+		writeJSON(w, http.StatusBadRequest, errorResponse{Error: "积分不能为负数"})
+		return
+	}
+
+	db := h.authService.DB()
+	var org model.Organization
+	if err := db.First(&org, req.OrganizationID).Error; err != nil {
+		writeJSON(w, http.StatusNotFound, errorResponse{Error: "组织不存在"})
+		return
+	}
+
+	if err := db.Model(&model.Organization{}).Where("id = ?", req.OrganizationID).Update("points", req.Points).Error; err != nil {
+		writeJSON(w, http.StatusInternalServerError, errorResponse{Error: "更新失败"})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]interface{}{"status": "ok", "points": req.Points})
+}
+
+func (h *AdminHandler) UpdateOrganizationName(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "方法不允许", http.StatusMethodNotAllowed)
+		return
+	}
+
+	user := auth.GetUserFromContext(r.Context())
+	if user == nil {
+		writeJSON(w, http.StatusUnauthorized, errorResponse{Error: "未授权访问"})
+		return
+	}
+
+	permissions, err := h.authService.GetAdminPermissions(user.ID)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, errorResponse{Error: "查询失败"})
+		return
+	}
+	if !permissions.IsSuperAdmin {
+		writeJSON(w, http.StatusForbidden, errorResponse{Error: "仅超级管理员可修改组织名称"})
+		return
+	}
+
+	var req struct {
+		OrganizationID uint   `json:"organization_id"`
+		Name           string `json:"name"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSON(w, http.StatusBadRequest, errorResponse{Error: "无效的请求格式"})
+		return
+	}
+
+	if req.OrganizationID == 0 {
+		writeJSON(w, http.StatusBadRequest, errorResponse{Error: "组织ID无效"})
+		return
+	}
+
+	name := strings.TrimSpace(req.Name)
+	if name == "" {
+		writeJSON(w, http.StatusBadRequest, errorResponse{Error: "组织名称不能为空"})
+		return
+	}
+
+	db := h.authService.DB()
+	var org model.Organization
+	if err := db.First(&org, req.OrganizationID).Error; err != nil {
+		writeJSON(w, http.StatusNotFound, errorResponse{Error: "组织不存在"})
+		return
+	}
+
+	if err := db.Model(&model.Organization{}).Where("id = ?", req.OrganizationID).Update("name", name).Error; err != nil {
+		if strings.Contains(err.Error(), "UNIQUE") || strings.Contains(err.Error(), "duplicate") {
+			writeJSON(w, http.StatusConflict, errorResponse{Error: "组织名称已存在"})
+			return
+		}
+		writeJSON(w, http.StatusInternalServerError, errorResponse{Error: "更新失败"})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]interface{}{"status": "ok", "name": name})
 }

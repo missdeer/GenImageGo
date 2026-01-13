@@ -125,6 +125,12 @@ func (s *Server) Start() error {
 	mux.HandleFunc("/api/admin/users/delete", s.adminHandler.DeleteUser)
 	mux.HandleFunc("/api/admin/users/update-memberships", s.adminHandler.UpdateUserMemberships)
 
+	mux.HandleFunc("/api/admin/orgs", s.adminHandler.ListOrgsForManagement)
+	mux.HandleFunc("/api/admin/orgs/create", s.adminHandler.CreateOrganization)
+	mux.HandleFunc("/api/admin/orgs/delete", s.adminHandler.DeleteOrganization)
+	mux.HandleFunc("/api/admin/orgs/update-points", s.adminHandler.UpdateOrganizationPoints)
+	mux.HandleFunc("/api/admin/orgs/update-name", s.adminHandler.UpdateOrganizationName)
+
 	serveHTML := func(filename string) http.HandlerFunc {
 		return func(w http.ResponseWriter, r *http.Request) {
 			r.URL.Path = "/" + filename
@@ -137,6 +143,7 @@ func (s *Server) Start() error {
 	mux.HandleFunc("/reset-password", serveHTML("reset-password.html"))
 	mux.HandleFunc("/verify-pending", serveHTML("verify-pending.html"))
 	mux.HandleFunc("/admin/users", serveHTML("admin/users.html"))
+	mux.HandleFunc("/admin/organizations", serveHTML("admin/organizations.html"))
 
 	htmlRedirects := map[string]string{
 		"/login.html":           "/login",
