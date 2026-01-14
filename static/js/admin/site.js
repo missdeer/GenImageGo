@@ -12,8 +12,7 @@
             const user = await resp.json();
 
             if (!user.is_super_admin) {
-                document.getElementById('loading').style.display = 'none';
-                document.getElementById('no-permission').style.display = 'block';
+                window.location.href = '/';
                 return;
             }
 
@@ -114,7 +113,8 @@
                 method: 'POST',
                 credentials: 'include',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': getCSRFToken()
                 },
                 body: JSON.stringify({ configs: updates })
             });

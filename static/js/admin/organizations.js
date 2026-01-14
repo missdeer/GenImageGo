@@ -21,8 +21,7 @@
             isSuperAdmin = user.is_super_admin;
 
             if (!user.can_manage_users) {
-                document.getElementById('loading').style.display = 'none';
-                document.getElementById('no-permission').style.display = 'block';
+                window.location.href = '/';
                 return;
             }
 
