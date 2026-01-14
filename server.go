@@ -19,16 +19,17 @@ import (
 )
 
 type Server struct {
-	addr         string
-	staticDir    string
-	config       ServerConfig
-	httpServer   *http.Server
-	handler      *handler.Handler
-	authHandler  *handler.AuthHandler
-	adminHandler *handler.AdminHandler
-	authService  *auth.Service
-	db           *gorm.DB
-	stopChan     chan struct{}
+	addr           string
+	staticDir      string
+	config         ServerConfig
+	httpServer     *http.Server
+	handler        *handler.Handler
+	authHandler    *handler.AuthHandler
+	adminHandler   *handler.AdminHandler
+	pointsHandler  *handler.PointsHandler
+	authService    *auth.Service
+	db             *gorm.DB
+	stopChan       chan struct{}
 }
 
 type ServerConfig struct {
@@ -101,17 +102,19 @@ func NewServer(addr, staticDir string, config ServerConfig, db *gorm.DB) *Server
 
 	authHandler := handler.NewAuthHandler(authService, mailService, baseWebURL)
 	adminHandler := handler.NewAdminHandler(authService)
+	pointsHandler := handler.NewPointsHandler(authService)
 
 	return &Server{
-		addr:         addr,
-		staticDir:    staticDir,
-		config:       config,
-		handler:      h,
-		authHandler:  authHandler,
-		adminHandler: adminHandler,
-		authService:  authService,
-		db:           db,
-		stopChan:     make(chan struct{}),
+		addr:           addr,
+		staticDir:      staticDir,
+		config:         config,
+		handler:        h,
+		authHandler:    authHandler,
+		adminHandler:   adminHandler,
+		pointsHandler:  pointsHandler,
+		authService:    authService,
+		db:             db,
+		stopChan:       make(chan struct{}),
 	}
 }
 
@@ -151,6 +154,10 @@ func (s *Server) Start() error {
 	mux.HandleFunc("/api/admin/orgs/delete", s.adminHandler.DeleteOrganization)
 	mux.HandleFunc("/api/admin/orgs/update-points", s.adminHandler.UpdateOrganizationPoints)
 	mux.HandleFunc("/api/admin/orgs/update-name", s.adminHandler.UpdateOrganizationName)
+
+	mux.HandleFunc("/api/user/points/history", s.pointsHandler.UserPointsHistory)
+	mux.HandleFunc("/api/admin/user/points/history", s.pointsHandler.AdminUserPointsHistory)
+	mux.HandleFunc("/api/admin/org/points/history", s.pointsHandler.AdminOrgPointsHistory)
 
 	serveHTML := func(filename string) http.HandlerFunc {
 		return func(w http.ResponseWriter, r *http.Request) {

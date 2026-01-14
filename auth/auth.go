@@ -4,11 +4,13 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"regexp"
 	"strings"
 	"time"
 
 	"genimage/model"
+	"genimage/points"
 
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
@@ -210,10 +212,23 @@ func (s *Service) Register(email, password, referralCode string) (*model.User, *
 
 		// Award referral bonus within the same transaction
 		if referrerID != nil {
-			if err := tx.Model(&model.User{}).Where("id = ?", *referrerID).Update("points", gorm.Expr("points + ?", referralBonus)).Error; err != nil {
+			referralOpID := fmt.Sprintf("referral:%d", user.ID)
+			_, err := points.AddUserPointsTx(tx, points.AddUserPointsParams{
+				UserID:      *referrerID,
+				Amount:      referralBonus,
+				Reason:      model.PointReasonReferralBonus,
+				OperationID: referralOpID,
+			})
+			if err != nil {
 				return err
 			}
-			if err := tx.Model(&model.User{}).Where("id = ?", user.ID).Update("points", gorm.Expr("points + ?", referralBonus)).Error; err != nil {
+			_, err = points.AddUserPointsTx(tx, points.AddUserPointsParams{
+				UserID:      user.ID,
+				Amount:      referralBonus,
+				Reason:      model.PointReasonReferredBonus,
+				OperationID: referralOpID,
+			})
+			if err != nil {
 				return err
 			}
 			user.Points = referralBonus
@@ -275,15 +290,13 @@ func (s *Service) Login(email, password string) (*model.User, *model.Session, er
 
 	if s.dailyLoginPoints > 0 && user.EmailVerified && user.Type == model.UserTypeNormal {
 		now := time.Now().UTC()
-		startOfDay := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
-		result := s.db.Model(&model.User{}).
-			Where("id = ? AND email_verified = ? AND type = ? AND (last_points_date IS NULL OR last_points_date < ?)",
-				user.ID, true, model.UserTypeNormal, startOfDay).
-			Updates(map[string]interface{}{
-				"points":           gorm.Expr("points + ?", s.dailyLoginPoints),
-				"last_points_date": now,
-			})
-		if result.Error == nil && result.RowsAffected > 0 {
+		dateStr := now.Format("2006-01-02")
+		record, err := points.AwardDailyLoginPoints(s.db, points.AwardDailyLoginParams{
+			UserID: user.ID,
+			Amount: s.dailyLoginPoints,
+			Date:   dateStr,
+		})
+		if err == nil && record != nil {
 			user.Points += s.dailyLoginPoints
 			user.LastPointsDate = &now
 		}

@@ -13,8 +13,7 @@ import (
 
 	"genimage/auth"
 	"genimage/model"
-
-	"gorm.io/gorm"
+	"genimage/points"
 )
 
 func handleGenerateImage(h *Handler, w http.ResponseWriter, r *http.Request) {
@@ -64,7 +63,7 @@ func handleGenerateImage(h *Handler, w http.ResponseWriter, r *http.Request) {
 	// Step 2: Deduct points (after validation passes)
 	var user *model.User
 	requiredPoints := h.config.ImageGenerationPoints
-	pointsDeducted := false
+	var deductRecord *model.PointTransaction
 
 	if requiredPoints > 0 && h.db != nil {
 		user = auth.GetUserFromContext(r.Context())
@@ -73,23 +72,27 @@ func handleGenerateImage(h *Handler, w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		result := h.db.Model(&model.User{}).
-			Where("id = ? AND points >= ?", user.ID, requiredPoints).
-			UpdateColumn("points", gorm.Expr("points - ?", requiredPoints))
-		if result.Error != nil {
-			log.Printf("generate-image deduct points failed: user=%d err=%v", user.ID, result.Error)
+		idempotencyKey := r.Header.Get("Idempotency-Key")
+		record, err := points.DeductUserPoints(h.db, points.DeductUserPointsParams{
+			UserID:      user.ID,
+			Amount:      requiredPoints,
+			Reason:      model.PointReasonImageGen,
+			OperationID: idempotencyKey,
+		})
+		if err != nil {
+			if err == points.ErrInsufficientPoints {
+				var currentUser model.User
+				h.db.Select("points").First(&currentUser, user.ID)
+				log.Printf("generate-image insufficient points: user=%d current=%d required=%d", user.ID, currentUser.Points, requiredPoints)
+				writeJSONError(w, http.StatusPaymentRequired, fmt.Sprintf("积分不足，当前积分: %d，需要积分: %d", currentUser.Points, requiredPoints))
+				return
+			}
+			log.Printf("generate-image deduct points failed: user=%d err=%v", user.ID, err)
 			writeJSONError(w, http.StatusInternalServerError, "扣除积分失败")
 			return
 		}
-		if result.RowsAffected == 0 {
-			var currentUser model.User
-			h.db.Select("points").First(&currentUser, user.ID)
-			log.Printf("generate-image insufficient points: user=%d current=%d required=%d", user.ID, currentUser.Points, requiredPoints)
-			writeJSONError(w, http.StatusPaymentRequired, fmt.Sprintf("积分不足，当前积分: %d，需要积分: %d", currentUser.Points, requiredPoints))
-			return
-		}
-		pointsDeducted = true
-		log.Printf("generate-image deduct points: user=%d points=%d", user.ID, requiredPoints)
+		deductRecord = record
+		log.Printf("generate-image deduct points: user=%d points=%d record=%d", user.ID, requiredPoints, record.ID)
 	}
 
 	// Step 3: Make upstream API request
@@ -116,8 +119,8 @@ func handleGenerateImage(h *Handler, w http.ResponseWriter, r *http.Request) {
 	resp, err := h.httpClient.Do(upstreamReq)
 	if err != nil {
 		log.Printf("generate-image upstream error: %v", err)
-		if pointsDeducted && user != nil {
-			refundPoints(h.db, user.ID, requiredPoints, "generate-image")
+		if deductRecord != nil && user != nil {
+			refundPoints(h.db, user.ID, requiredPoints, deductRecord.ID, "generate-image")
 		}
 		http.Error(w, "upstream request failed", http.StatusBadGateway)
 		return
@@ -132,8 +135,8 @@ func handleGenerateImage(h *Handler, w http.ResponseWriter, r *http.Request) {
 	}
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		if pointsDeducted && user != nil {
-			refundPoints(h.db, user.ID, requiredPoints, "generate-image")
+		if deductRecord != nil && user != nil {
+			refundPoints(h.db, user.ID, requiredPoints, deductRecord.ID, "generate-image")
 		}
 	}
 

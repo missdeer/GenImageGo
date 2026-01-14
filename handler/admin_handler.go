@@ -10,7 +10,9 @@ import (
 
 	"genimage/auth"
 	"genimage/model"
+	"genimage/points"
 
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
@@ -413,15 +415,20 @@ func (h *AdminHandler) AllocateUserPoints(w http.ResponseWriter, r *http.Request
 
 	// 超级管理员直接增加用户积分，不扣组织积分
 	if permissions.IsSuperAdmin {
-		result := db.Model(&model.User{}).Where("id = ?", req.UserID).
-			UpdateColumn("points", gorm.Expr("points + ?", req.Points))
-
-		if result.Error != nil {
+		operationID := uuid.New().String()
+		_, err := points.AddUserPoints(db, points.AddUserPointsParams{
+			UserID:      req.UserID,
+			Amount:      req.Points,
+			Reason:      model.PointReasonAdminGrant,
+			OperatorID:  &user.ID,
+			OperationID: operationID,
+		})
+		if err != nil {
+			if err == points.ErrUserNotFound {
+				writeJSON(w, http.StatusNotFound, errorResponse{Error: "用户不存在"})
+				return
+			}
 			writeJSON(w, http.StatusInternalServerError, errorResponse{Error: "操作失败"})
-			return
-		}
-		if result.RowsAffected == 0 {
-			writeJSON(w, http.StatusNotFound, errorResponse{Error: "用户不存在"})
 			return
 		}
 		writeJSON(w, http.StatusOK, map[string]interface{}{"status": "ok", "points_added": req.Points})
@@ -450,11 +457,11 @@ func (h *AdminHandler) AllocateUserPoints(w http.ResponseWriter, r *http.Request
 	// 使用事务保证原子性，所有检查和更新都在事务内
 	err = db.Transaction(func(tx *gorm.DB) error {
 		// 验证用户存在
-		var user model.User
-		if err := tx.First(&user, req.UserID).Error; err != nil {
+		var txUser model.User
+		if err := tx.First(&txUser, req.UserID).Error; err != nil {
 			return err
 		}
-		if user.Type == model.UserTypeSuperAdmin {
+		if txUser.Type == model.UserTypeSuperAdmin {
 			return ErrSuperAdminTarget
 		}
 
@@ -468,31 +475,23 @@ func (h *AdminHandler) AllocateUserPoints(w http.ResponseWriter, r *http.Request
 			return err
 		}
 
-		// 使用条件更新确保积分充足（适用于所有数据库）
-		result := tx.Model(&model.Organization{}).
-			Where("id = ? AND points >= ?", req.OrganizationID, req.Points).
-			UpdateColumn("points", gorm.Expr("points - ?", req.Points))
-
-		if result.Error != nil {
-			return result.Error
-		}
-		if result.RowsAffected == 0 {
-			// 检查是组织不存在还是积分不足
-			var org model.Organization
-			if err := tx.First(&org, req.OrganizationID).Error; err != nil {
-				return err
+		// 使用 points 包进行划拨
+		operationID := uuid.New().String()
+		_, _, err := points.TransferOrgToUserTx(tx, points.TransferOrgToUserParams{
+			OrgID:       req.OrganizationID,
+			UserID:      req.UserID,
+			Amount:      req.Points,
+			OperatorID:  &user.ID,
+			OperationID: operationID,
+		})
+		if err != nil {
+			if err == points.ErrInsufficientPoints {
+				return ErrInsufficientPoints
 			}
-			return ErrInsufficientPoints
-		}
-
-		// 增加用户积分
-		result = tx.Model(&model.User{}).Where("id = ?", req.UserID).
-			UpdateColumn("points", gorm.Expr("points + ?", req.Points))
-		if result.Error != nil {
-			return result.Error
-		}
-		if result.RowsAffected == 0 {
-			return gorm.ErrRecordNotFound
+			if err == points.ErrOrgNotFound {
+				return gorm.ErrRecordNotFound
+			}
+			return err
 		}
 
 		return nil
@@ -883,11 +882,34 @@ func (h *AdminHandler) CreateOrganization(w http.ResponseWriter, r *http.Request
 
 	org := model.Organization{
 		Name:   name,
-		Points: req.Points,
+		Points: 0,
 	}
 
 	db := h.authService.DB()
-	if err := db.Create(&org).Error; err != nil {
+	err = db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Create(&org).Error; err != nil {
+			return err
+		}
+
+		if req.Points > 0 {
+			operationID := uuid.New().String()
+			_, err := points.AddOrgPointsTx(tx, points.AddOrgPointsParams{
+				OrgID:       org.ID,
+				Amount:      req.Points,
+				Reason:      model.PointReasonOrgInitial,
+				Description: "组织创建初始积分",
+				OperatorID:  &user.ID,
+				OperationID: operationID,
+			})
+			if err != nil {
+				return err
+			}
+			org.Points = req.Points
+		}
+
+		return nil
+	})
+	if err != nil {
 		if strings.Contains(err.Error(), "UNIQUE") || strings.Contains(err.Error(), "Duplicate") {
 			writeJSON(w, http.StatusBadRequest, errorResponse{Error: "组织名称已存在"})
 			return
@@ -1004,13 +1026,20 @@ func (h *AdminHandler) UpdateOrganizationPoints(w http.ResponseWriter, r *http.R
 	}
 
 	db := h.authService.DB()
-	var org model.Organization
-	if err := db.First(&org, req.OrganizationID).Error; err != nil {
-		writeJSON(w, http.StatusNotFound, errorResponse{Error: "组织不存在"})
-		return
-	}
-
-	if err := db.Model(&model.Organization{}).Where("id = ?", req.OrganizationID).Update("points", req.Points).Error; err != nil {
+	operationID := uuid.New().String()
+	_, err = points.SetOrgPoints(db, points.SetOrgPointsParams{
+		OrgID:       req.OrganizationID,
+		NewBalance:  req.Points,
+		Reason:      model.PointReasonOrgAdjust,
+		Description: "管理员修改组织积分",
+		OperatorID:  &user.ID,
+		OperationID: operationID,
+	})
+	if err != nil {
+		if err == points.ErrOrgNotFound {
+			writeJSON(w, http.StatusNotFound, errorResponse{Error: "组织不存在"})
+			return
+		}
 		writeJSON(w, http.StatusInternalServerError, errorResponse{Error: "更新失败"})
 		return
 	}

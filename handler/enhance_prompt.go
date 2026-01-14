@@ -13,8 +13,7 @@ import (
 
 	"genimage/auth"
 	"genimage/model"
-
-	"gorm.io/gorm"
+	"genimage/points"
 )
 
 func handleEnhancePrompt(h *Handler, w http.ResponseWriter, r *http.Request) {
@@ -64,7 +63,7 @@ func handleEnhancePrompt(h *Handler, w http.ResponseWriter, r *http.Request) {
 	// Step 2: Deduct points (after validation passes)
 	var user *model.User
 	requiredPoints := h.config.EnhancePromptPoints
-	pointsDeducted := false
+	var deductRecord *model.PointTransaction
 
 	if requiredPoints > 0 && h.db != nil {
 		user = auth.GetUserFromContext(r.Context())
@@ -73,23 +72,27 @@ func handleEnhancePrompt(h *Handler, w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		result := h.db.Model(&model.User{}).
-			Where("id = ? AND points >= ?", user.ID, requiredPoints).
-			UpdateColumn("points", gorm.Expr("points - ?", requiredPoints))
-		if result.Error != nil {
-			log.Printf("enhance-prompt deduct points failed: user=%d err=%v", user.ID, result.Error)
+		idempotencyKey := r.Header.Get("Idempotency-Key")
+		record, err := points.DeductUserPoints(h.db, points.DeductUserPointsParams{
+			UserID:      user.ID,
+			Amount:      requiredPoints,
+			Reason:      model.PointReasonEnhancePrompt,
+			OperationID: idempotencyKey,
+		})
+		if err != nil {
+			if err == points.ErrInsufficientPoints {
+				var currentUser model.User
+				h.db.Select("points").First(&currentUser, user.ID)
+				log.Printf("enhance-prompt insufficient points: user=%d current=%d required=%d", user.ID, currentUser.Points, requiredPoints)
+				writeJSONError(w, http.StatusPaymentRequired, fmt.Sprintf("积分不足，当前积分: %d，需要积分: %d", currentUser.Points, requiredPoints))
+				return
+			}
+			log.Printf("enhance-prompt deduct points failed: user=%d err=%v", user.ID, err)
 			writeJSONError(w, http.StatusInternalServerError, "扣除积分失败")
 			return
 		}
-		if result.RowsAffected == 0 {
-			var currentUser model.User
-			h.db.Select("points").First(&currentUser, user.ID)
-			log.Printf("enhance-prompt insufficient points: user=%d current=%d required=%d", user.ID, currentUser.Points, requiredPoints)
-			writeJSONError(w, http.StatusPaymentRequired, fmt.Sprintf("积分不足，当前积分: %d，需要积分: %d", currentUser.Points, requiredPoints))
-			return
-		}
-		pointsDeducted = true
-		log.Printf("enhance-prompt deduct points: user=%d points=%d", user.ID, requiredPoints)
+		deductRecord = record
+		log.Printf("enhance-prompt deduct points: user=%d points=%d record=%d", user.ID, requiredPoints, record.ID)
 	}
 
 	// Step 3: Make upstream API request
@@ -102,8 +105,8 @@ func handleEnhancePrompt(h *Handler, w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err != nil {
-		if pointsDeducted && user != nil {
-			refundPoints(h.db, user.ID, requiredPoints, "enhance-prompt")
+		if deductRecord != nil && user != nil {
+			refundPoints(h.db, user.ID, requiredPoints, deductRecord.ID, "enhance-prompt")
 		}
 		http.Error(w, err.Error(), http.StatusBadGateway)
 		return

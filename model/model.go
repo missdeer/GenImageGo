@@ -142,9 +142,35 @@ func InitDB(dbType, dsn string) (*gorm.DB, error) {
 		return nil, fmt.Errorf("无法连接数据库: %w", err)
 	}
 
-	if err := db.AutoMigrate(&User{}, &Session{}, &PasswordResetToken{}, &EmailVerificationToken{}, &Organization{}, &Membership{}, &IdempotencyKey{}); err != nil {
+	if err := db.AutoMigrate(&User{}, &Session{}, &PasswordResetToken{}, &EmailVerificationToken{}, &Organization{}, &Membership{}, &IdempotencyKey{}, &PointTransaction{}); err != nil {
 		return nil, fmt.Errorf("数据库迁移失败: %w", err)
 	}
 
+	if err := createPointTransactionIndexes(db); err != nil {
+		return nil, fmt.Errorf("创建积分记录索引失败: %w", err)
+	}
+
 	return db, nil
+}
+
+func createPointTransactionIndexes(db *gorm.DB) error {
+	migrator := db.Migrator()
+
+	if !migrator.HasIndex(&PointTransaction{}, "idx_pt_operation_user") {
+		if err := db.Exec("CREATE UNIQUE INDEX idx_pt_operation_user ON point_transactions (operation_id, type, user_id) WHERE user_id IS NOT NULL").Error; err != nil {
+			if err := db.Exec("CREATE UNIQUE INDEX idx_pt_operation_user ON point_transactions (operation_id, type, user_id)").Error; err != nil {
+				return err
+			}
+		}
+	}
+
+	if !migrator.HasIndex(&PointTransaction{}, "idx_pt_operation_org") {
+		if err := db.Exec("CREATE UNIQUE INDEX idx_pt_operation_org ON point_transactions (operation_id, type, organization_id) WHERE organization_id IS NOT NULL").Error; err != nil {
+			if err := db.Exec("CREATE UNIQUE INDEX idx_pt_operation_org ON point_transactions (operation_id, type, organization_id)").Error; err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
 }

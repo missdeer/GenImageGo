@@ -2,11 +2,12 @@ package handler
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"time"
 
-	"genimage/model"
+	"genimage/points"
 
 	"gorm.io/gorm"
 )
@@ -70,14 +71,21 @@ func writeJSONError(w http.ResponseWriter, statusCode int, message string) {
 	_ = json.NewEncoder(w).Encode(resp)
 }
 
-func refundPoints(db *gorm.DB, userID uint, points int, operation string) {
-	if db == nil || points <= 0 {
+func refundPoints(db *gorm.DB, userID uint, amount int, refTransactionID uint, operation string) {
+	if db == nil || amount <= 0 {
 		return
 	}
-	if err := db.Model(&model.User{}).Where("id = ?", userID).
-		UpdateColumn("points", gorm.Expr("points + ?", points)).Error; err != nil {
-		log.Printf("%s refund points failed: user=%d points=%d err=%v", operation, userID, points, err)
+	operationID := fmt.Sprintf("refund:%d", refTransactionID)
+	_, err := points.RefundUserPoints(db, points.RefundParams{
+		UserID:           userID,
+		Amount:           amount,
+		Description:      operation,
+		OperationID:      operationID,
+		RefTransactionID: refTransactionID,
+	})
+	if err != nil {
+		log.Printf("%s refund points failed: user=%d points=%d err=%v", operation, userID, amount, err)
 	} else {
-		log.Printf("%s refund points: user=%d points=%d", operation, userID, points)
+		log.Printf("%s refund points: user=%d points=%d", operation, userID, amount)
 	}
 }
