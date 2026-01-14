@@ -3,8 +3,8 @@
 #slice-modal.active { display: flex; }
 .slice-header-bar { position: absolute; top: 0; left: 0; right: 0; height: var(--header-height); border-bottom: 1px solid #e0e0e0; display: flex; justify-content: space-between; align-items: center; padding: 0 24px; background: #fff; z-index: 10; }
 .slice-title { font-size: 18px; color: #202124; font-weight: 500; display: flex; align-items: center; gap: 10px; }
-.slice-close { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #5f6368; transition: background 0.2s; }
-.slice-close:hover { background: #f1f3f4; color: #202124; }
+.slice-back-link { display: inline-flex; align-items: center; gap: 6px; color: var(--primary-color, #4a90d9); text-decoration: none; font-size: 14px; cursor: pointer; }
+.slice-back-link:hover { text-decoration: underline; }
 .slice-toolbar { width: 100%; max-width: 1000px; padding: 16px 24px; display: flex; gap: 16px; align-items: center; justify-content: center; flex-wrap: wrap; background: #fff; border-bottom: 1px solid #f0f0f0; margin-bottom: 20px; flex-shrink: 0; }
 .slice-btn-group { display: flex; gap: 4px; background: #f1f3f4; padding: 4px; border-radius: 8px; align-items: center; }
 .radio-label { padding: 6px 12px; cursor: pointer; font-size: 13px; color: #5f6368; border-radius: 6px; transition: all 0.2s; font-weight: 500; display: flex; align-items: center; gap: 6px; }
@@ -39,6 +39,7 @@
 .slice-card:hover .download-hint { opacity: 1; }
 
 [data-theme="dark"] .slice-header-bar { background: var(--bg-secondary) !important; border-color: var(--border-color) !important; color: var(--text-main) !important; }
+[data-theme="dark"] .slice-back-link { color: var(--primary-color, #4a90d9) !important; }
 [data-theme="dark"] .slicer-modal-content { background: var(--card-bg) !important; color: var(--text-main) !important; }
 [data-theme="dark"] .slicer-canvas-area { background: var(--input-bg) !important; border-color: var(--border-color) !important; }
 [data-theme="dark"] .slicer-controls { background: var(--card-bg) !important; border-color: var(--border-color) !important; }

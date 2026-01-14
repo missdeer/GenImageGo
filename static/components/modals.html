@@ -1,9 +1,15 @@
     <!-- Banana Prompt Modal -->
     <div id="banana-modal" class="xhs-modal">
         <div class="slice-header-bar">
+            <a class="slice-back-link" onclick="BananaTool.close()">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 12H5M12 19l-7-7 7-7"/>
+                </svg>
+                返回首页
+            </a>
             <div class="slice-title">
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                    style="margin-right:8px; color:#d97706;">
+                    style="color:#d97706;">
                     <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
                 </svg>
                 <span>提示词快查</span>
@@ -16,12 +22,6 @@
                     </svg>
                     <span>GitHub</span>
                 </a>
-            </div>
-            <div class="slice-close" onclick="BananaTool.close()">
-                <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2">
-                    <line x1="18" y1="6" x2="6" y2="18"></line>
-                    <line x1="6" y1="6" x2="18" y2="18"></line>
-                </svg>
             </div>
         </div>
         <div
@@ -59,20 +59,20 @@
     <!-- Custom Prompt Modal -->
     <div id="custom-prompt-modal" class="xhs-modal">
         <div class="slice-header-bar">
+            <a class="slice-back-link" onclick="CustomPromptTool.close()">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 12H5M12 19l-7-7 7-7"/>
+                </svg>
+                返回首页
+            </a>
             <div class="slice-title">
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                    style="margin-right:8px; color:#9333ea;">
+                    style="color:#9333ea;">
                     <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
                     <polyline points="17 21 17 13 7 13 7 21" />
                     <polyline points="7 3 7 8 15 8" />
                 </svg>
                 <span>我的提示词</span>
-            </div>
-            <div class="slice-close" onclick="CustomPromptTool.close()">
-                <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2">
-                    <line x1="18" y1="6" x2="6" y2="18"></line>
-                    <line x1="6" y1="6" x2="18" y2="18"></line>
-                </svg>
             </div>
         </div>
         <div
@@ -149,8 +149,14 @@
     <!-- Slicer Modal -->
     <div id="slice-modal">
         <div class="slice-header-bar">
+            <a class="slice-back-link" onclick="SlicerTool.close()">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 12H5M12 19l-7-7 7-7"/>
+                </svg>
+                返回首页
+            </a>
             <div class="slice-title">
-                <svg width="22" height="22" style="margin-right:8px;" viewBox="0 0 24 24" fill="none"
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
                     stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                     <circle cx="6" cy="6" r="3" />
                     <circle cx="6" cy="18" r="3" />
@@ -159,12 +165,6 @@
                     <line x1="8.12" y1="8.12" x2="12" y2="12" />
                 </svg>
                 图片分割工厂
-            </div>
-            <div class="slice-close" onclick="SlicerTool.close()">
-                <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2">
-                    <line x1="18" y1="6" x2="6" y2="18"></line>
-                    <line x1="6" y1="6" x2="18" y2="18"></line>
-                </svg>
             </div>
         </div>
         <div class="slice-scroll-area">
