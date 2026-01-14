@@ -28,6 +28,7 @@ type Server struct {
 	adminHandler *handler.AdminHandler
 	authService  *auth.Service
 	db           *gorm.DB
+	stopChan     chan struct{}
 }
 
 type ServerConfig struct {
@@ -96,6 +97,7 @@ func NewServer(addr, staticDir string, config ServerConfig, db *gorm.DB) *Server
 		adminHandler: adminHandler,
 		authService:  authService,
 		db:           db,
+		stopChan:     make(chan struct{}),
 	}
 }
 
@@ -194,9 +196,30 @@ func (s *Server) Start() error {
 	go func() {
 		ticker := time.NewTicker(1 * time.Hour)
 		defer ticker.Stop()
-		for range ticker.C {
-			if err := middleware.CleanExpiredIdempotencyKeys(s.db); err != nil {
-				fmt.Printf("清理过期幂等键失败: %v\n", err)
+		for {
+			select {
+			case <-ticker.C:
+				if err := middleware.CleanExpiredIdempotencyKeys(s.db); err != nil {
+					fmt.Printf("清理过期幂等键失败: %v\n", err)
+				}
+			case <-s.stopChan:
+				return
+			}
+		}
+	}()
+
+	// Start background cleanup for expired sessions
+	go func() {
+		ticker := time.NewTicker(1 * time.Hour)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ticker.C:
+				if err := s.authService.CleanExpiredSessions(); err != nil {
+					fmt.Printf("清理过期会话失败: %v\n", err)
+				}
+			case <-s.stopChan:
+				return
 			}
 		}
 	}()
@@ -207,6 +230,7 @@ func (s *Server) Start() error {
 	go func() {
 		<-sigChan
 		fmt.Println("\n正在关闭服务器...")
+		close(s.stopChan)
 		s.httpServer.Close()
 	}()
 

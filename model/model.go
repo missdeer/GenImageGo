@@ -114,9 +114,14 @@ func InitDB(dbType, dsn string) (*gorm.DB, error) {
 	switch dbType {
 	case "sqlite":
 		if !strings.Contains(dsn, "?") {
-			dsn += "?_pragma=foreign_keys(1)"
-		} else if !strings.Contains(dsn, "_pragma=foreign_keys") {
-			dsn += "&_pragma=foreign_keys(1)"
+			dsn += "?_pragma=foreign_keys(1)&_pragma=journal_mode(WAL)"
+		} else {
+			if !strings.Contains(dsn, "_pragma=foreign_keys") {
+				dsn += "&_pragma=foreign_keys(1)"
+			}
+			if !strings.Contains(dsn, "journal_mode") {
+				dsn += "&_pragma=journal_mode(WAL)"
+			}
 		}
 		dialector = sqlite.Open(dsn)
 	case "mysql":
