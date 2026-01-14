@@ -47,36 +47,38 @@
                 </div>
             </div>
 
-            <label class="config-label">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                    style="vertical-align: middle; margin-right: 4px;">
-                    <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
-                    <polyline points="17 21 17 13 7 13 7 21"></polyline>
-                    <polyline points="7 3 7 8 15 8"></polyline>
-                </svg>
-                自动保存到本地
-            </label>
-            <div style="margin-bottom: 24px; padding: 12px; background: #f8f9fa; border-radius: 8px;">
-                <label
-                    style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13px; color: #444; user-select: none; margin-bottom: 12px;">
-                    <input type="checkbox" id="auto-save-toggle" style="width: 16px; height: 16px; cursor: pointer;">
-                    <span>启用自动保存（不占用浏览器空间）</span>
-                </label>
-                <button class="config-btn" onclick="FileSystemManager.selectDirectory()"
-                    style="width: 100%; margin-bottom: 8px;">
+            <div id="auto-save-section">
+                <label class="config-label">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                         style="vertical-align: middle; margin-right: 4px;">
-                        <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+                        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                        <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                        <polyline points="7 3 7 8 15 8"></polyline>
                     </svg>
-                    选择保存目录
-                </button>
-                <div id="selected-dir-path"
-                    style="font-size: 12px; color: #666; padding: 8px; background: #fff; border-radius: 4px; word-break: break-all; display: none;">
-                    <strong>当前目录：</strong><span id="dir-path-text">未选择</span>
-                </div>
-                <div style="font-size: 11px; color: #888; margin-top: 8px; line-height: 1.4;">
-                    💡 启用后，生成的图片将自动保存到选择的目录<br>
-                    ⚠️ 需要 Chrome 86+ 或 Edge 86+ 浏览器支持
+                    自动保存到本地
+                </label>
+                <div style="margin-bottom: 24px; padding: 12px; background: #f8f9fa; border-radius: 8px;">
+                    <label
+                        style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13px; color: #444; user-select: none; margin-bottom: 12px;">
+                        <input type="checkbox" id="auto-save-toggle" style="width: 16px; height: 16px; cursor: pointer;">
+                        <span>启用自动保存（不占用浏览器空间）</span>
+                    </label>
+                    <button class="config-btn" onclick="FileSystemManager.selectDirectory()"
+                        style="width: 100%; margin-bottom: 8px;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                            style="vertical-align: middle; margin-right: 4px;">
+                            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+                        </svg>
+                        选择保存目录
+                    </button>
+                    <div id="selected-dir-path"
+                        style="font-size: 12px; color: #666; padding: 8px; background: #fff; border-radius: 4px; word-break: break-all; display: none;">
+                        <strong>当前目录：</strong><span id="dir-path-text">未选择</span>
+                    </div>
+                    <div style="font-size: 11px; color: #888; margin-top: 8px; line-height: 1.4;">
+                        💡 启用后，生成的图片将自动保存到选择的目录<br>
+                        ⚠️ 需要支持 File System Access API 的浏览器（Chrome、Edge、Brave 等）
+                    </div>
                 </div>
             </div>
 

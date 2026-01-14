@@ -10,6 +10,12 @@ const FileSystemManager = {
 
     // 初始化
     init() {
+        const autoSaveSection = document.getElementById('auto-save-section');
+        if (autoSaveSection && !this.isSupported()) {
+            autoSaveSection.style.display = 'none';
+            return;
+        }
+
         const autoSaveToggle = document.getElementById('auto-save-toggle');
         if (autoSaveToggle) {
             // 加载保存的设置
@@ -55,7 +61,7 @@ const FileSystemManager = {
     // 选择目录
     async selectDirectory() {
         if (!this.isSupported()) {
-            showToast('您的浏览器不支持此功能，请使用 Chrome 86+ 或 Edge 86+', 'error', 3000);
+            showToast('您的浏览器不支持此功能，请使用支持 File System Access API 的浏览器', 'error', 3000);
             return;
         }
 
