@@ -6,6 +6,7 @@
     let userPermissions = null;
     let currentUserId = null;
     let allOrganizations = [];
+    let usersCache = new Map();
 
     // Modal state
     let pointsModalUser = null;
@@ -88,7 +89,9 @@
         if (!data.users || data.users.length === 0) {
             tbody.innerHTML = '<tr><td colspan="7" class="empty-message">暂无用户</td></tr>';
         } else {
+            usersCache.clear();
             data.users.forEach(user => {
+                usersCache.set(user.id, user);
                 const tr = document.createElement('tr');
                 const isSelf = user.id === currentUserId;
                 const isSuperAdmin = user.type === 1;
@@ -106,15 +109,14 @@
                 let actions = '';
                 if (canOperate) {
                     if (user.disabled) {
-                        actions += `<button class="action-btn enable" onclick="window.adminActions.toggleDisabled(${user.id}, '${escapeHtml(user.email)}', false)">启用</button>`;
+                        actions += `<button class="action-btn enable" data-action="toggle-disabled" data-user-id="${user.id}" data-disabled="false">启用</button>`;
                     } else {
-                        actions += `<button class="action-btn disable" onclick="window.adminActions.toggleDisabled(${user.id}, '${escapeHtml(user.email)}', true)">禁用</button>`;
+                        actions += `<button class="action-btn disable" data-action="toggle-disabled" data-user-id="${user.id}" data-disabled="true">禁用</button>`;
                     }
-                    actions += `<button class="action-btn points" onclick="window.adminActions.openPointsModal(${user.id}, '${escapeHtml(user.email)}', ${user.points})">积分</button>`;
-                    const orgsData = encodeURIComponent(JSON.stringify(user.organizations || []));
-                    actions += `<button class="action-btn orgs" onclick="window.adminActions.openOrgsModal(${user.id}, '${escapeHtml(user.email)}', '${orgsData}')">组织</button>`;
+                    actions += `<button class="action-btn points" data-action="open-points" data-user-id="${user.id}">积分</button>`;
+                    actions += `<button class="action-btn orgs" data-action="open-orgs" data-user-id="${user.id}">组织</button>`;
                     if (!isSuperAdmin) {
-                        actions += `<button class="action-btn delete" onclick="window.adminActions.deleteUser(${user.id}, '${escapeHtml(user.email)}')">删除</button>`;
+                        actions += `<button class="action-btn delete" data-action="delete-user" data-user-id="${user.id}">删除</button>`;
                     }
                 } else if (isSelf) {
                     actions = '<span style="color:var(--text-secondary);font-size:12px;">当前用户</span>';
@@ -218,10 +220,61 @@
     }
 
     // Points modal
-    function openPointsModal(userId, email, currentPoints) {
-        pointsModalUser = { id: userId, email: email };
+    async function openPointsModal(userId, email, currentPoints, organizations) {
+        pointsModalUser = {
+            id: userId,
+            email: email,
+            currentPoints: currentPoints,
+            organizations: organizations || []
+        };
+
         document.getElementById('points-modal-email').textContent = email;
-        document.getElementById('points-input').value = currentPoints;
+        document.getElementById('points-modal-current').textContent = currentPoints;
+        document.getElementById('points-input').value = '';
+
+        // 如果是超级管理员，不需要选择组织
+        if (userPermissions.is_super_admin) {
+            document.getElementById('points-org-select-wrapper').style.display = 'none';
+        } else {
+            // 组织管理员需要选择组织
+            if (allOrganizations.length === 0) {
+                await loadOrganizations();
+            }
+
+            const select = document.getElementById('points-org-select');
+            select.innerHTML = '<option value="">请选择组织...</option>';
+
+            // 只显示用户所属的且当前管理员有权限的组织
+            const userOrgIds = pointsModalUser.organizations.map(o => Number(o.id));
+            const managedOrgIds = userPermissions.managed_organizations.map(o => Number(o.id));
+            const availableOrgs = allOrganizations.filter(org =>
+                userOrgIds.includes(Number(org.id)) && managedOrgIds.includes(Number(org.id))
+            );
+
+            availableOrgs.forEach(org => {
+                const option = document.createElement('option');
+                option.value = org.id;
+                option.textContent = org.name;
+                option.dataset.points = org.points || 0;
+                select.appendChild(option);
+            });
+
+            // 监听组织选择变化，显示组织积分
+            select.onchange = function() {
+                const selectedOption = this.options[this.selectedIndex];
+                const orgPoints = selectedOption.dataset.points || 0;
+                const infoEl = document.getElementById('points-org-info');
+                if (this.value) {
+                    infoEl.textContent = `该组织当前积分: ${orgPoints}`;
+                } else {
+                    infoEl.textContent = '';
+                }
+            };
+
+            document.getElementById('points-org-select-wrapper').style.display = 'block';
+            document.getElementById('points-org-info').textContent = '';
+        }
+
         document.getElementById('points-modal').style.display = 'flex';
     }
 
@@ -232,26 +285,45 @@
 
     async function submitUpdatePoints() {
         if (!pointsModalUser) return;
+
         const points = parseInt(document.getElementById('points-input').value, 10);
-        if (isNaN(points) || points < 0) {
-            alert('请输入有效的积分值');
+        if (isNaN(points) || points <= 0) {
+            alert('请输入有效的积分值（必须大于0）');
             return;
         }
+
+        let organizationId = null;
+        if (!userPermissions.is_super_admin) {
+            organizationId = parseInt(document.getElementById('points-org-select').value, 10);
+            if (!organizationId) {
+                alert('请选择组织');
+                return;
+            }
+        }
+
         try {
-            const resp = await fetch('/api/admin/users/update-points', {
+            const payload = {
+                user_id: pointsModalUser.id,
+                points: points
+            };
+            if (organizationId) {
+                payload.organization_id = organizationId;
+            }
+
+            const resp = await fetch('/api/admin/users/allocate-points', {
                 method: 'POST',
-                headers: { 
+                headers: {
                     'Content-Type': 'application/json',
                     'X-CSRF-Token': getCSRFToken()
                 },
-                body: JSON.stringify({ user_id: pointsModalUser.id, points: points })
+                body: JSON.stringify(payload)
             });
             const data = await resp.json();
             if (!resp.ok) throw new Error(data.error || '操作失败');
             closePointsModal();
             loadUsers();
         } catch (e) {
-            alert('修改失败: ' + e.message);
+            alert('分配失败: ' + e.message);
         }
     }
 
@@ -279,10 +351,9 @@
     }
 
     // Organizations modal
-    async function openOrgsModal(userId, email, encodedOrgs) {
+    async function openOrgsModal(userId, email, organizations) {
         orgsModalUser = { id: userId, email: email };
-        const currentOrgs = JSON.parse(decodeURIComponent(encodedOrgs));
-        orgsModalMemberships = (currentOrgs || []).map(o => ({
+        orgsModalMemberships = (organizations || []).map(o => ({
             organization_id: Number(o.id),
             role: Number(o.role),
             name: o.name
@@ -402,6 +473,33 @@
     }
 
     // Event listeners
+    // Event delegation for action buttons
+    document.getElementById('users-tbody').addEventListener('click', (e) => {
+        const btn = e.target.closest('button[data-action]');
+        if (!btn) return;
+
+        const action = btn.dataset.action;
+        const userId = parseInt(btn.dataset.userId, 10);
+        const user = usersCache.get(userId);
+        if (!user) return;
+
+        switch (action) {
+            case 'toggle-disabled':
+                const disabled = btn.dataset.disabled === 'true';
+                toggleDisabled(userId, user.email, disabled);
+                break;
+            case 'open-points':
+                openPointsModal(userId, user.email, user.points, user.organizations || []);
+                break;
+            case 'open-orgs':
+                openOrgsModal(userId, user.email, user.organizations || []);
+                break;
+            case 'delete-user':
+                deleteUser(userId, user.email);
+                break;
+        }
+    });
+
     document.getElementById('search-btn').addEventListener('click', () => {
         currentKeyword = document.getElementById('search-keyword').value.trim();
         currentPage = 1;
@@ -434,13 +532,7 @@
         }
     });
 
-    // Expose functions to window for onclick handlers
-    window.adminActions = {
-        toggleDisabled,
-        deleteUser,
-        openPointsModal,
-        openOrgsModal
-    };
+    // Expose functions to window for modal handlers
     window.closePointsModal = closePointsModal;
     window.submitUpdatePoints = submitUpdatePoints;
     window.closeConfirmModal = closeConfirmModal;

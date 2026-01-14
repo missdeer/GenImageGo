@@ -76,13 +76,23 @@
     <div id="points-modal" class="admin-modal" style="display:none;">
         <div class="admin-modal-content">
             <div class="admin-modal-header">
-                <h3>修改积分</h3>
+                <h3>分配积分</h3>
                 <span class="admin-modal-close" onclick="closePointsModal()">&times;</span>
             </div>
             <div class="admin-modal-body">
                 <p>用户: <span id="points-modal-email"></span></p>
-                <label for="points-input">积分:</label>
-                <input type="number" id="points-input" min="0" style="width:100%; padding:8px; margin-top:8px;">
+                <p style="margin-top:8px;">当前积分: <span id="points-modal-current"></span></p>
+
+                <div id="points-org-select-wrapper" style="margin-top:16px;display:none;">
+                    <label for="points-org-select">选择组织:</label>
+                    <select id="points-org-select" style="width:100%; padding:8px; margin-top:8px; border:1px solid var(--border-color); border-radius:6px; background:var(--bg-primary); color:var(--text-primary);">
+                        <option value="">请选择组织...</option>
+                    </select>
+                    <p id="points-org-info" style="margin-top:8px;font-size:0.9em;color:var(--text-secondary);"></p>
+                </div>
+
+                <label for="points-input" style="margin-top:16px;display:block;">增加积分:</label>
+                <input type="number" id="points-input" min="1" placeholder="输入要增加的积分数" style="width:100%; padding:8px; margin-top:8px;">
             </div>
             <div class="admin-modal-footer">
                 <button class="btn-secondary" onclick="closePointsModal()">取消</button>

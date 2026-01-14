@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strconv"
 	"strings"
@@ -11,6 +12,12 @@ import (
 	"genimage/model"
 
 	"gorm.io/gorm"
+)
+
+var (
+	ErrNotMember          = errors.New("user not org member")
+	ErrInsufficientPoints = errors.New("insufficient org points")
+	ErrSuperAdminTarget   = errors.New("target user is super admin")
 )
 
 type AdminHandler struct {
@@ -206,8 +213,9 @@ func contains(slice []uint, val uint) bool {
 }
 
 type orgListItem struct {
-	ID   uint   `json:"id"`
-	Name string `json:"name"`
+	ID     uint   `json:"id"`
+	Name   string `json:"name"`
+	Points int    `json:"points"`
 }
 
 func (h *AdminHandler) ListOrganizations(w http.ResponseWriter, r *http.Request) {
@@ -257,7 +265,7 @@ func (h *AdminHandler) ListOrganizations(w http.ResponseWriter, r *http.Request)
 
 	items := make([]orgListItem, len(orgs))
 	for i, o := range orgs {
-		items[i] = orgListItem{ID: o.ID, Name: o.Name}
+		items[i] = orgListItem{ID: o.ID, Name: o.Name, Points: o.Points}
 	}
 
 	writeJSON(w, http.StatusOK, map[string]interface{}{"organizations": items})
@@ -345,7 +353,7 @@ func (h *AdminHandler) ToggleUserDisabled(w http.ResponseWriter, r *http.Request
 	writeJSON(w, http.StatusOK, map[string]interface{}{"status": "ok", "disabled": req.Disabled})
 }
 
-func (h *AdminHandler) UpdateUserPoints(w http.ResponseWriter, r *http.Request) {
+func (h *AdminHandler) AllocateUserPoints(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "方法不允许", http.StatusMethodNotAllowed)
 		return
@@ -368,37 +376,144 @@ func (h *AdminHandler) UpdateUserPoints(w http.ResponseWriter, r *http.Request) 
 	}
 
 	var req struct {
-		UserID uint `json:"user_id"`
-		Points int  `json:"points"`
+		UserID         uint `json:"user_id"`
+		Points         int  `json:"points"`
+		OrganizationID uint `json:"organization_id"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeJSON(w, http.StatusBadRequest, errorResponse{Error: "无效的请求格式"})
 		return
 	}
 
-	if req.Points < 0 {
-		writeJSON(w, http.StatusBadRequest, errorResponse{Error: "积分不能为负数"})
+	if req.Points <= 0 {
+		writeJSON(w, http.StatusBadRequest, errorResponse{Error: "积分必须大于0"})
 		return
 	}
 
 	db := h.authService.DB()
+
+	// 先检查目标用户是否存在
 	var targetUser model.User
 	if err := db.First(&targetUser, req.UserID).Error; err != nil {
 		writeJSON(w, http.StatusNotFound, errorResponse{Error: "用户不存在"})
 		return
 	}
 
+	// 非超级管理员不能操作超级管理员
+	if targetUser.Type == model.UserTypeSuperAdmin && !permissions.IsSuperAdmin {
+		writeJSON(w, http.StatusForbidden, errorResponse{Error: "无权限操作超级管理员"})
+		return
+	}
+
+	// 基本权限检查
 	if !h.canManageUser(permissions, req.UserID) {
 		writeJSON(w, http.StatusForbidden, errorResponse{Error: "无权限操作该用户"})
 		return
 	}
 
-	if err := db.Model(&model.User{}).Where("id = ?", req.UserID).Update("points", req.Points).Error; err != nil {
-		writeJSON(w, http.StatusInternalServerError, errorResponse{Error: "操作失败"})
+	// 超级管理员直接增加用户积分，不扣组织积分
+	if permissions.IsSuperAdmin {
+		result := db.Model(&model.User{}).Where("id = ?", req.UserID).
+			UpdateColumn("points", gorm.Expr("points + ?", req.Points))
+
+		if result.Error != nil {
+			writeJSON(w, http.StatusInternalServerError, errorResponse{Error: "操作失败"})
+			return
+		}
+		if result.RowsAffected == 0 {
+			writeJSON(w, http.StatusNotFound, errorResponse{Error: "用户不存在"})
+			return
+		}
+		writeJSON(w, http.StatusOK, map[string]interface{}{"status": "ok", "points_added": req.Points})
 		return
 	}
 
-	writeJSON(w, http.StatusOK, map[string]interface{}{"status": "ok", "points": req.Points})
+	// 组织管理员需要从组织积分划拨
+	if req.OrganizationID == 0 {
+		writeJSON(w, http.StatusBadRequest, errorResponse{Error: "组织ID不能为空"})
+		return
+	}
+
+	// 验证管理员是否有权管理该组织
+	var hasPermission bool
+	for _, org := range permissions.ManagedOrganizations {
+		if org.ID == req.OrganizationID {
+			hasPermission = true
+			break
+		}
+	}
+	if !hasPermission {
+		writeJSON(w, http.StatusForbidden, errorResponse{Error: "无权限操作该组织"})
+		return
+	}
+
+	// 使用事务保证原子性，所有检查和更新都在事务内
+	err = db.Transaction(func(tx *gorm.DB) error {
+		// 验证用户存在
+		var user model.User
+		if err := tx.First(&user, req.UserID).Error; err != nil {
+			return err
+		}
+		if user.Type == model.UserTypeSuperAdmin {
+			return ErrSuperAdminTarget
+		}
+
+		// 验证用户是该组织成员
+		var membership model.Membership
+		if err := tx.Where("user_id = ? AND organization_id = ?", req.UserID, req.OrganizationID).
+			First(&membership).Error; err != nil {
+			if err == gorm.ErrRecordNotFound {
+				return ErrNotMember
+			}
+			return err
+		}
+
+		// 使用条件更新确保积分充足（适用于所有数据库）
+		result := tx.Model(&model.Organization{}).
+			Where("id = ? AND points >= ?", req.OrganizationID, req.Points).
+			UpdateColumn("points", gorm.Expr("points - ?", req.Points))
+
+		if result.Error != nil {
+			return result.Error
+		}
+		if result.RowsAffected == 0 {
+			// 检查是组织不存在还是积分不足
+			var org model.Organization
+			if err := tx.First(&org, req.OrganizationID).Error; err != nil {
+				return err
+			}
+			return ErrInsufficientPoints
+		}
+
+		// 增加用户积分
+		result = tx.Model(&model.User{}).Where("id = ?", req.UserID).
+			UpdateColumn("points", gorm.Expr("points + ?", req.Points))
+		if result.Error != nil {
+			return result.Error
+		}
+		if result.RowsAffected == 0 {
+			return gorm.ErrRecordNotFound
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		if errors.Is(err, ErrNotMember) {
+			writeJSON(w, http.StatusBadRequest, errorResponse{Error: "用户不是该组织成员"})
+		} else if errors.Is(err, ErrSuperAdminTarget) {
+			writeJSON(w, http.StatusForbidden, errorResponse{Error: "无权限操作超级管理员"})
+		} else if errors.Is(err, ErrInsufficientPoints) {
+			writeJSON(w, http.StatusBadRequest, errorResponse{Error: "组织积分不足"})
+		} else if errors.Is(err, gorm.ErrRecordNotFound) {
+			writeJSON(w, http.StatusNotFound, errorResponse{Error: "用户或组织不存在"})
+		} else {
+			writeJSON(w, http.StatusInternalServerError, errorResponse{Error: "操作失败"})
+		}
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]interface{}{"status": "ok", "points_added": req.Points})
 }
 
 func (h *AdminHandler) DeleteUser(w http.ResponseWriter, r *http.Request) {

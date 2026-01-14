@@ -126,7 +126,7 @@ func (s *Server) Start() error {
 	mux.HandleFunc("/api/admin/users", s.adminHandler.ListUsers)
 	mux.HandleFunc("/api/admin/organizations", s.adminHandler.ListOrganizations)
 	mux.HandleFunc("/api/admin/users/toggle-disabled", s.adminHandler.ToggleUserDisabled)
-	mux.HandleFunc("/api/admin/users/update-points", s.adminHandler.UpdateUserPoints)
+	mux.HandleFunc("/api/admin/users/allocate-points", s.adminHandler.AllocateUserPoints)
 	mux.HandleFunc("/api/admin/users/delete", s.adminHandler.DeleteUser)
 	mux.HandleFunc("/api/admin/users/update-memberships", s.adminHandler.UpdateUserMemberships)
 
