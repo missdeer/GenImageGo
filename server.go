@@ -177,6 +177,7 @@ func (s *Server) Start() error {
 	mux.HandleFunc("/admin/users", serveHTML("admin/users.html"))
 	mux.HandleFunc("/admin/organizations", serveHTML("admin/organizations.html"))
 	mux.HandleFunc("/admin/site", serveHTML("admin/site.html"))
+	mux.HandleFunc("/admin/points", serveHTML("admin/points.html"))
 
 	htmlRedirects := map[string]string{
 		"/login.html":           "/login",

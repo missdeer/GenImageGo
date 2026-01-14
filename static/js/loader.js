@@ -48,6 +48,11 @@ async function initApplication() {
         // Allow DOM to update before running init
         setTimeout(() => {
             window.initializeApp();
+            // Show account section for all logged-in users
+            const accountSection = document.getElementById('account-section');
+            if (accountSection) {
+                accountSection.style.display = 'block';
+            }
             // Show admin section if user has permission
             if (window.currentUser && window.currentUser.can_manage_users) {
                 const adminSection = document.getElementById('admin-section');
