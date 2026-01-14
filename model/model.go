@@ -5,7 +5,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/glebarez/sqlite"
 	"gorm.io/driver/mysql"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -123,7 +122,7 @@ func InitDB(dbType, dsn string) (*gorm.DB, error) {
 				dsn += "&_pragma=journal_mode(WAL)"
 			}
 		}
-		dialector = sqlite.Open(dsn)
+		dialector = openSQLite(dsn)
 	case "mysql":
 		if dsn == "" {
 			return nil, fmt.Errorf("MySQL 需要指定连接字符串 (--db-dsn)")
