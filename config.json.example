@@ -1,0 +1,33 @@
+{
+  "_comment": "GenImageGo 配置文件示例 - 复制为 config.json 后修改使用",
+
+  "api_service": "gemini",
+  "model": "gemini-3-pro-image-preview",
+  "text_model": "gemini-3-flash-preview",
+  "base_url": "https://generativelanguage.googleapis.com",
+  "api_key": "YOUR_API_KEY_HERE",
+
+  "output": "output.jpg",
+  "aspect_ratio": "3:4",
+  "resolution": "4K",
+
+  "db_type": "sqlite",
+  "db_dsn": "genimage.db",
+
+  "base_web_url": "https://your-domain.com",
+  "secure_cookies": true,
+  "daily_login_points": 10,
+
+  "smtp": {
+    "host": "smtp.example.com",
+    "port": 587,
+    "username": "noreply@example.com",
+    "password": "YOUR_SMTP_PASSWORD",
+    "from": "noreply@example.com"
+  },
+
+  "_vertexai_comment": "Vertex AI 模式需要以下配置",
+  "project": "",
+  "location": "us-central1",
+  "credentials": ""
+}

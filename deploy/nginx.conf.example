@@ -1,0 +1,261 @@
+# ===============================================
+# GenImageGo nginx 反向代理配置示例
+# 架构: 用户 → nginx → Go
+# ===============================================
+
+# ==================== http 块配置 ====================
+# 以下内容需要放在 nginx.conf 的 http {} 块中
+
+# --- 限流区域定义 ---
+# 认证接口：每分钟 5 次（防暴力破解）
+limit_req_zone $binary_remote_addr zone=auth_limit:10m rate=5r/m;
+
+# 图片生成接口：每分钟 20 次（消耗资源大）
+limit_req_zone $binary_remote_addr zone=generate_limit:10m rate=20r/m;
+
+# 通用接口：每秒 30 次
+limit_req_zone $binary_remote_addr zone=general:10m rate=30r/s;
+
+# 连接数限制
+limit_conn_zone $binary_remote_addr zone=conn_limit:10m;
+
+# --- 限流日志格式 ---
+log_format rate_limit '$remote_addr - [$time_local] "$request" $status '
+                      'limit_req_status=$limit_req_status';
+
+# 记录被限流的请求
+map $status $is_rate_limited {
+    429     1;
+    default 0;
+}
+
+# ==================== server 块配置 ====================
+
+# HTTP -> HTTPS 重定向
+server {
+    listen 80;
+    server_name your-domain.com;
+
+    # ACME challenge（Let's Encrypt 证书续期）
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
+
+    location / {
+        return 301 https://$server_name$request_uri;
+    }
+}
+
+# HTTPS 主配置
+server {
+    listen 443 ssl http2;
+    server_name your-domain.com;
+
+    # ===================== SSL/TLS 配置 =====================
+    ssl_certificate     /etc/letsencrypt/live/your-domain.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/your-domain.com/privkey.pem;
+
+    # 现代 TLS 配置（仅 TLS 1.2 和 1.3）
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305;
+    ssl_prefer_server_ciphers off;
+
+    # SSL 会话缓存
+    ssl_session_cache shared:SSL:10m;
+    ssl_session_timeout 1d;
+    ssl_session_tickets off;
+
+    # OCSP Stapling（加速证书验证）
+    ssl_stapling on;
+    ssl_stapling_verify on;
+    resolver 8.8.8.8 1.1.1.1 valid=300s;
+    resolver_timeout 5s;
+
+    # ===================== 安全响应头 =====================
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-XSS-Protection "1; mode=block" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+
+    # 隐藏服务器版本信息
+    server_tokens off;
+
+    # ===================== 通用限制 =====================
+    # 请求体大小限制（上传图片）
+    client_max_body_size 50M;
+
+    # 单 IP 最大连接数
+    limit_conn conn_limit 20;
+
+    # 限流状态码
+    limit_req_status 429;
+    limit_conn_status 429;
+
+    # ===================== 通用反代设置 =====================
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+
+    # CSRF 相关头透传
+    proxy_set_header Origin $http_origin;
+    proxy_set_header Referer $http_referer;
+    proxy_pass_header X-CSRF-Token;
+
+    # ===================== 日志配置 =====================
+    access_log /var/log/nginx/genimage_access.log;
+    error_log /var/log/nginx/genimage_error.log;
+
+    # 限流日志（单独记录被限流的请求）
+    access_log /var/log/nginx/genimage_rate_limited.log rate_limit if=$is_rate_limited;
+
+    # ===================== 限流自定义响应 =====================
+    error_page 429 = @rate_limited;
+
+    location @rate_limited {
+        default_type application/json;
+        return 429 '{"error": "请求过于频繁，请稍后再试"}';
+    }
+
+    # ===================== 认证接口（严格限流） =====================
+    # 登录、注册、忘记密码 - 最容易被暴力破解
+    location ~ ^/api/auth/(login|register|forgot-password)$ {
+        limit_req zone=auth_limit burst=3 nodelay;
+        limit_conn conn_limit 5;
+
+        proxy_pass http://127.0.0.1:8080;
+        proxy_read_timeout 30s;
+    }
+
+    # 其他认证接口
+    location /api/auth/ {
+        limit_req zone=general burst=10 nodelay;
+
+        proxy_pass http://127.0.0.1:8080;
+        proxy_read_timeout 30s;
+    }
+
+    # ===================== 图片生成接口（长超时、限并发） =====================
+    location /generate-image {
+        limit_req zone=generate_limit burst=5 nodelay;
+        limit_conn conn_limit 3;    # 单 IP 同时最多 3 个生成请求
+
+        proxy_pass http://127.0.0.1:8080;
+        proxy_read_timeout 300s;    # 5 分钟超时（AI 生成耗时长）
+        proxy_send_timeout 60s;
+        proxy_buffering off;        # 禁用缓冲，支持流式响应
+    }
+
+    # ===================== 提示词增强接口 =====================
+    location /enhance-prompt {
+        limit_req zone=generate_limit burst=10 nodelay;
+
+        proxy_pass http://127.0.0.1:8080;
+        proxy_read_timeout 120s;    # 2 分钟超时
+    }
+
+    # ===================== 管理后台（IP 白名单） =====================
+    # 管理页面
+    location /admin/ {
+        # 仅允许内网或特定 IP 访问
+        allow 127.0.0.1;
+        allow 10.0.0.0/8;
+        allow 172.16.0.0/12;
+        allow 192.168.0.0/16;
+        # allow YOUR_ADMIN_IP;      # 添加你的管理员 IP
+        deny all;
+
+        proxy_pass http://127.0.0.1:8080;
+        proxy_read_timeout 30s;
+    }
+
+    # 管理 API
+    location /api/admin/ {
+        allow 127.0.0.1;
+        allow 10.0.0.0/8;
+        allow 172.16.0.0/12;
+        allow 192.168.0.0/16;
+        # allow YOUR_ADMIN_IP;
+        deny all;
+
+        proxy_pass http://127.0.0.1:8080;
+        proxy_read_timeout 30s;
+    }
+
+    # ===================== 静态资源（浏览器缓存） =====================
+    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
+        proxy_pass http://127.0.0.1:8080;
+
+        # 缓存 7 天
+        expires 7d;
+        add_header Cache-Control "public, immutable";
+
+        # 静态资源不需要限流
+    }
+
+    # ===================== 健康检查（可选） =====================
+    location /health {
+        access_log off;
+        return 200 "OK";
+        add_header Content-Type text/plain;
+    }
+
+    # ===================== 默认路由 =====================
+    location / {
+        limit_req zone=general burst=50 nodelay;
+
+        proxy_pass http://127.0.0.1:8080;
+        proxy_read_timeout 30s;
+    }
+
+    # ===================== 错误页面 =====================
+    error_page 502 503 504 /50x.html;
+    location = /50x.html {
+        root /usr/share/nginx/html;
+        internal;
+    }
+}
+
+
+# ===============================================
+# 配置说明
+# ===============================================
+#
+# 限流参数说明:
+#   - zone=xxx:10m    存储区大小，10MB 约可存储 16 万个 IP 状态
+#   - rate=5r/m       每分钟 5 次请求（即每 12 秒 1 次）
+#   - rate=30r/s      每秒 30 次请求
+#   - burst=N         允许突发 N 个请求
+#   - nodelay         突发请求立即处理，超出则拒绝（不排队）
+#
+# 限流阈值参考:
+#   | 接口           | 阈值    | 理由                       |
+#   |---------------|---------|---------------------------|
+#   | 登录/注册      | 5r/m    | 正常用户不会频繁登录        |
+#   | 忘记密码       | 5r/m    | 防止邮件轰炸               |
+#   | 图片生成       | 20r/m   | 消耗 API 配额和服务器资源   |
+#   | 静态资源       | 不限流   | 使用缓存即可               |
+#
+# 部署步骤:
+#   1. 将此文件复制到 /etc/nginx/sites-available/genimage
+#   2. 创建软链接: ln -s /etc/nginx/sites-available/genimage /etc/nginx/sites-enabled/
+#   3. 修改 server_name 为你的域名
+#   4. 配置 SSL 证书路径
+#   5. 根据需要调整管理后台的 IP 白名单
+#   6. 测试配置: nginx -t
+#   7. 重载配置: nginx -s reload
+#
+# Go 应用配置 (config.json):
+#   {
+#     "base_web_url": "https://your-domain.com",
+#     "secure_cookies": true
+#   }
+#
+# 证书申请 (Let's Encrypt):
+#   certbot certonly --webroot -w /var/www/certbot -d your-domain.com
+#
+# 自动续期:
+#   certbot renew --quiet --post-hook "nginx -s reload"
+#
