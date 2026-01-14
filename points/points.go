@@ -161,11 +161,11 @@ func DeductUserPoints(db *gorm.DB, p DeductUserPointsParams) (*model.PointTransa
 }
 
 type RefundParams struct {
-	UserID             uint
-	Amount             int
-	Description        string
-	OperationID        string
-	RefTransactionID   uint
+	UserID           uint
+	Amount           int
+	Description      string
+	OperationID      string
+	RefTransactionID uint
 }
 
 func RefundUserPointsTx(tx *gorm.DB, p RefundParams) (*model.PointTransaction, error) {

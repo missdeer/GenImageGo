@@ -8,6 +8,7 @@ import (
 
 	dbmodel "genimage/model"
 	"genimage/service"
+	"genimage/siteconfig"
 	"genimage/util"
 
 	"github.com/spf13/pflag"
@@ -30,26 +31,29 @@ var AvailableModels = []string{
 
 // CLI 参数
 var (
-	configFile  string
-	apiService  string
-	model       string
-	textModel   string
-	prompt      string
-	promptFile  string
-	baseURL     string
-	apiKey      string
-	output      string
-	project     string
-	location    string
-	credentials string
-	aspectRatio string
-	resolution  string
-	showHelp    bool
-	serve       bool
-	serverAddr  string
-	staticDir   string
-	dbType      string
-	dbDSN       string
+	configFile            string
+	apiService            string
+	model                 string
+	textModel             string
+	prompt                string
+	promptFile            string
+	baseURL               string
+	apiKey                string
+	output                string
+	project               string
+	location              string
+	credentials           string
+	aspectRatio           string
+	resolution            string
+	showHelp              bool
+	serve                 bool
+	serverAddr            string
+	staticDir             string
+	dbType                string
+	dbDSN                 string
+	dailyLoginPoints      int
+	imageGenerationPoints int
+	enhancePromptPoints   int
 )
 
 func init() {
@@ -92,6 +96,11 @@ func init() {
 	// 数据库配置
 	pflag.StringVar(&dbType, "db-type", "", "数据库类型（默认: sqlite）\n可选值: sqlite, mysql, postgres")
 	pflag.StringVar(&dbDSN, "db-dsn", "", "数据库连接字符串（默认: genimage.db）")
+
+	// 积分配置（覆盖数据库设置，不指定则使用数据库值）
+	pflag.IntVar(&dailyLoginPoints, "daily-login-points", 0, "覆盖每日登录奖励积分（数据库默认: 10）")
+	pflag.IntVar(&imageGenerationPoints, "image-generation-points", 0, "覆盖生图扣除积分（数据库默认: 20）")
+	pflag.IntVar(&enhancePromptPoints, "enhance-prompt-points", 0, "覆盖提示词优化扣除积分（数据库默认: 4）")
 
 	// 自定义用法
 	pflag.Usage = func() {
@@ -142,6 +151,15 @@ func main() {
 			os.Exit(1)
 		}
 
+		siteConfigService := siteconfig.NewService(db)
+
+		// 构建 CLI/配置文件覆盖配置（使用指针区分"未设置"和"设置为0"）
+		overrideConfig := siteconfig.OverrideConfig{
+			DailyLoginPoints:      getOverrideInt("daily-login-points", dailyLoginPoints, getConfigIntPtr(config, "daily_login_points")),
+			ImageGenerationPoints: getOverrideInt("image-generation-points", imageGenerationPoints, getConfigIntPtr(config, "image_generation_points")),
+			EnhancePromptPoints:   getOverrideInt("enhance-prompt-points", enhancePromptPoints, getConfigIntPtr(config, "enhance_prompt_points")),
+		}
+
 		apiSvcValue := getConfigValue(apiService, getConfigString(config, "api_service"), string(Defaults.APIService))
 		modelValue, modelSource := getConfigValueWithSource(model, getConfigString(config, "model"), Defaults.Model)
 		textModelValue := getConfigValue(textModel, getConfigString(config, "text_model"), Defaults.TextModel)
@@ -158,24 +176,18 @@ func main() {
 			baseWebURL = config.BaseWebURL
 		}
 
-		var dailyLoginPoints int
-		if config != nil {
-			dailyLoginPoints = config.DailyLoginPoints
-		}
-
 		server := NewServer(serverAddr, staticDir, ServerConfig{
-			APIService:       apiSvcValue,
-			Model:            modelValue,
-			TextModel:        textModelValue,
-			BaseURL:          baseURLValue,
-			APIKey:           apiKeyValue,
-			ModelSource:      modelSource,
-			BaseURLSource:    baseURLSource,
-			APIKeySource:     apiKeySource,
-			SMTP:             smtpConfig,
-			BaseWebURL:       baseWebURL,
-			DailyLoginPoints: dailyLoginPoints,
-		}, db)
+			APIService:    apiSvcValue,
+			Model:         modelValue,
+			TextModel:     textModelValue,
+			BaseURL:       baseURLValue,
+			APIKey:        apiKeyValue,
+			ModelSource:   modelSource,
+			BaseURLSource: baseURLSource,
+			APIKeySource:  apiKeySource,
+			SMTP:          smtpConfig,
+			BaseWebURL:    baseWebURL,
+		}, db, siteConfigService, overrideConfig)
 		if err := server.Start(); err != nil {
 			fmt.Fprintf(os.Stderr, "错误: %v\n", err)
 			os.Exit(1)
@@ -416,4 +428,33 @@ func getDir(path string) string {
 		}
 	}
 	return ""
+}
+
+// getOverrideInt 获取整数覆盖值，优先级：CLI > 配置文件
+// 使用 pflag.Changed() 检测 CLI 是否显式设置（包括设置为 0）
+// 返回 nil 表示未设置任何覆盖
+func getOverrideInt(flagName string, cliValue int, configPtr *int) *int {
+	// Check if CLI flag was explicitly set
+	if flag := pflag.Lookup(flagName); flag != nil && flag.Changed {
+		return &cliValue
+	}
+
+	// Fall back to config file value
+	return configPtr
+}
+
+// getConfigIntPtr 从配置中获取整数指针（nil 表示未设置）
+func getConfigIntPtr(config *Config, key string) *int {
+	if config == nil {
+		return nil
+	}
+	switch key {
+	case "daily_login_points":
+		return config.DailyLoginPoints
+	case "image_generation_points":
+		return config.ImageGenerationPoints
+	case "enhance_prompt_points":
+		return config.EnhancePromptPoints
+	}
+	return nil
 }

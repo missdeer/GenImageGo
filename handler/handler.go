@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"genimage/points"
+	"genimage/siteconfig"
 
 	"gorm.io/gorm"
 )
@@ -29,8 +30,7 @@ type Config struct {
 	DefaultAPIKey     string
 	EnhancePromptText string
 
-	ImageGenerationPoints int
-	EnhancePromptPoints   int
+	SiteConfigService *siteconfig.Service
 }
 
 type Handler struct {

@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>站点管理 - Image Go</title>
+    <link rel="stylesheet" href="../css/variables.css">
+    <link rel="stylesheet" href="../css/auth.css">
+    <link rel="stylesheet" href="../css/admin.css">
+    <script>
+        (function() {
+            const theme = localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-theme', theme);
+        })();
+    </script>
+</head>
+<body>
+    <div class="admin-container">
+        <a href="/" class="back-link">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M19 12H5M12 19l-7-7 7-7"/>
+            </svg>
+            返回首页
+        </a>
+        <div class="admin-header">
+            <h1>站点管理</h1>
+        </div>
+
+        <div class="admin-content">
+            <div id="loading" class="loading">加载中...</div>
+            <div id="error-message" class="error-message"></div>
+            <div id="no-permission" class="no-permission" style="display:none;">
+                <p>您没有权限访问此页面</p>
+                <a href="/">返回首页</a>
+            </div>
+
+            <div id="config-form" style="display:none;">
+                <h2 class="config-section-title">积分配置</h2>
+                <div id="config-items" class="config-items"></div>
+                <div class="config-actions">
+                    <button id="save-btn" class="btn-primary" onclick="saveConfigs()">保存配置</button>
+                    <span id="save-status" class="save-status"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="theme-toggle" onclick="toggleTheme()">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="5"></circle>
+            <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"></path>
+        </svg>
+    </div>
+
+    <script src="../js/auth.js"></script>
+    <script src="../js/admin/site.js"></script>
+</body>
+</html>

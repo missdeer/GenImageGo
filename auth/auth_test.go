@@ -18,7 +18,7 @@ func setupTestDB(t *testing.T) *model.User {
 		sqlDB.Close()
 	})
 
-	svc := NewService(db, 0)
+	svc := NewService(db, nil)
 	user, _, err := svc.Register("test@example.com", "Password123", "")
 	if err != nil {
 		t.Fatalf("failed to register test user: %v", err)
@@ -40,7 +40,7 @@ func TestRegister(t *testing.T) {
 		sqlDB.Close()
 	}()
 
-	svc := NewService(db, 0)
+	svc := NewService(db, nil)
 
 	tests := []struct {
 		name     string
@@ -76,7 +76,7 @@ func TestRegisterDuplicate(t *testing.T) {
 		sqlDB.Close()
 	}()
 
-	svc := NewService(db, 0)
+	svc := NewService(db, nil)
 
 	_, _, err = svc.Register("test@example.com", "Password123", "")
 	if err != nil {
@@ -99,7 +99,7 @@ func TestLogin(t *testing.T) {
 		sqlDB.Close()
 	}()
 
-	svc := NewService(db, 0)
+	svc := NewService(db, nil)
 
 	_, _, err = svc.Register("test@example.com", "Password123", "")
 	if err != nil {
@@ -137,7 +137,7 @@ func TestSessionValidation(t *testing.T) {
 		sqlDB.Close()
 	}()
 
-	svc := NewService(db, 0)
+	svc := NewService(db, nil)
 
 	user, session, err := svc.Register("test@example.com", "Password123", "")
 	if err != nil {
@@ -168,7 +168,7 @@ func TestLogout(t *testing.T) {
 		sqlDB.Close()
 	}()
 
-	svc := NewService(db, 0)
+	svc := NewService(db, nil)
 
 	_, session, err := svc.Register("test@example.com", "Password123", "")
 	if err != nil {
@@ -196,7 +196,7 @@ func TestCreatePasswordResetToken(t *testing.T) {
 		sqlDB.Close()
 	}()
 
-	svc := NewService(db, 0)
+	svc := NewService(db, nil)
 
 	_, _, err = svc.Register("test@example.com", "Password123", "")
 	if err != nil {
@@ -233,7 +233,7 @@ func TestValidatePasswordResetToken(t *testing.T) {
 		sqlDB.Close()
 	}()
 
-	svc := NewService(db, 0)
+	svc := NewService(db, nil)
 
 	user, _, err := svc.Register("test@example.com", "Password123", "")
 	if err != nil {
@@ -269,7 +269,7 @@ func TestResetPassword(t *testing.T) {
 		sqlDB.Close()
 	}()
 
-	svc := NewService(db, 0)
+	svc := NewService(db, nil)
 
 	_, _, err = svc.Register("test@example.com", "Password123", "")
 	if err != nil {
@@ -312,7 +312,7 @@ func TestResetPasswordValidation(t *testing.T) {
 		sqlDB.Close()
 	}()
 
-	svc := NewService(db, 0)
+	svc := NewService(db, nil)
 
 	_, _, err = svc.Register("test@example.com", "Password123", "")
 	if err != nil {
@@ -355,7 +355,7 @@ func TestDailyLoginPoints(t *testing.T) {
 		sqlDB.Close()
 	}()
 
-	svc := NewService(db, 100)
+	svc := NewService(db, nil)
 
 	user, _, err := svc.Register("points@example.com", "Password123", "")
 	if err != nil {
@@ -368,16 +368,16 @@ func TestDailyLoginPoints(t *testing.T) {
 	if err != nil {
 		t.Fatalf("login failed: %v", err)
 	}
-	if loggedUser.Points != 100 {
-		t.Errorf("expected 100 points after first login, got %d", loggedUser.Points)
+	if loggedUser.Points != 10 {
+		t.Errorf("expected 10 points after first login, got %d", loggedUser.Points)
 	}
 
 	loggedUser2, _, err := svc.Login("points@example.com", "Password123")
 	if err != nil {
 		t.Fatalf("second login failed: %v", err)
 	}
-	if loggedUser2.Points != 100 {
-		t.Errorf("expected 100 points after second login (no duplicate), got %d", loggedUser2.Points)
+	if loggedUser2.Points != 10 {
+		t.Errorf("expected 10 points after second login (no duplicate), got %d", loggedUser2.Points)
 	}
 }
 
@@ -391,7 +391,7 @@ func TestDailyLoginPointsUnverifiedUser(t *testing.T) {
 		sqlDB.Close()
 	}()
 
-	svc := NewService(db, 100)
+	svc := NewService(db, nil)
 
 	_, _, err = svc.Register("unverified@example.com", "Password123", "")
 	if err != nil {

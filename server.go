@@ -14,52 +14,44 @@ import (
 	"genimage/handler"
 	"genimage/mail"
 	"genimage/middleware"
+	"genimage/siteconfig"
 
 	"gorm.io/gorm"
 )
 
 type Server struct {
-	addr           string
-	staticDir      string
-	config         ServerConfig
-	httpServer     *http.Server
-	handler        *handler.Handler
-	authHandler    *handler.AuthHandler
-	adminHandler   *handler.AdminHandler
-	pointsHandler  *handler.PointsHandler
-	authService    *auth.Service
-	db             *gorm.DB
-	stopChan       chan struct{}
+	addr              string
+	staticDir         string
+	config            ServerConfig
+	httpServer        *http.Server
+	handler           *handler.Handler
+	authHandler       *handler.AuthHandler
+	adminHandler      *handler.AdminHandler
+	pointsHandler     *handler.PointsHandler
+	siteConfigHandler *handler.SiteConfigHandler
+	authService       *auth.Service
+	siteConfigService *siteconfig.Service
+	overrideConfig    siteconfig.OverrideConfig
+	db                *gorm.DB
+	stopChan          chan struct{}
 }
 
 type ServerConfig struct {
-	APIService            string
-	Model                 string
-	TextModel             string
-	BaseURL               string
-	APIKey                string
-	ModelSource           string
-	BaseURLSource         string
-	APIKeySource          string
-	SMTP                  *SMTPConfig
-	BaseWebURL            string
-	DailyLoginPoints      int
-	ImageGenerationPoints int
-	EnhancePromptPoints   int
-	SecureCookies         bool // Set to true for HTTPS production
+	APIService    string
+	Model         string
+	TextModel     string
+	BaseURL       string
+	APIKey        string
+	ModelSource   string
+	BaseURLSource string
+	APIKeySource  string
+	SMTP          *SMTPConfig
+	BaseWebURL    string
+	SecureCookies bool // Set to true for HTTPS production
 }
 
-func NewServer(addr, staticDir string, config ServerConfig, db *gorm.DB) *Server {
+func NewServer(addr, staticDir string, config ServerConfig, db *gorm.DB, siteConfigService *siteconfig.Service, overrideConfig siteconfig.OverrideConfig) *Server {
 	enhancePromptText := embeddedEnhancePrompt
-
-	imageGenerationPoints := config.ImageGenerationPoints
-	if imageGenerationPoints == 0 {
-		imageGenerationPoints = 20
-	}
-	enhancePromptPoints := config.EnhancePromptPoints
-	if enhancePromptPoints == 0 {
-		enhancePromptPoints = 4
-	}
 
 	h := handler.New(handler.Config{
 		APIService:    config.APIService,
@@ -78,11 +70,10 @@ func NewServer(addr, staticDir string, config ServerConfig, db *gorm.DB) *Server
 		DefaultAPIKey:     Defaults.APIKey,
 		EnhancePromptText: enhancePromptText,
 
-		ImageGenerationPoints: imageGenerationPoints,
-		EnhancePromptPoints:   enhancePromptPoints,
+		SiteConfigService: siteConfigService,
 	}, db)
 
-	authService := auth.NewService(db, config.DailyLoginPoints)
+	authService := auth.NewService(db, siteConfigService)
 
 	var mailService *mail.Service
 	if config.SMTP != nil && config.SMTP.Host != "" {
@@ -103,18 +94,22 @@ func NewServer(addr, staticDir string, config ServerConfig, db *gorm.DB) *Server
 	authHandler := handler.NewAuthHandler(authService, mailService, baseWebURL)
 	adminHandler := handler.NewAdminHandler(authService)
 	pointsHandler := handler.NewPointsHandler(authService)
+	siteConfigHandler := handler.NewSiteConfigHandler(authService, siteConfigService)
 
 	return &Server{
-		addr:           addr,
-		staticDir:      staticDir,
-		config:         config,
-		handler:        h,
-		authHandler:    authHandler,
-		adminHandler:   adminHandler,
-		pointsHandler:  pointsHandler,
-		authService:    authService,
-		db:             db,
-		stopChan:       make(chan struct{}),
+		addr:              addr,
+		staticDir:         staticDir,
+		config:            config,
+		handler:           h,
+		authHandler:       authHandler,
+		adminHandler:      adminHandler,
+		pointsHandler:     pointsHandler,
+		siteConfigHandler: siteConfigHandler,
+		authService:       authService,
+		siteConfigService: siteConfigService,
+		overrideConfig:    overrideConfig,
+		db:                db,
+		stopChan:          make(chan struct{}),
 	}
 }
 
@@ -122,6 +117,12 @@ func (s *Server) Start() error {
 	staticSubFS, err := fs.Sub(staticFiles, "static")
 	if err != nil {
 		return fmt.Errorf("无法访问嵌入的静态资源: %w", err)
+	}
+	if s.siteConfigService != nil {
+		if err := s.siteConfigService.Load(); err != nil {
+			return fmt.Errorf("加载站点配置失败: %w", err)
+		}
+		s.siteConfigService.SetOverrides(s.overrideConfig)
 	}
 
 	mux := http.NewServeMux()
@@ -159,6 +160,8 @@ func (s *Server) Start() error {
 	mux.HandleFunc("/api/admin/user/points/history", s.pointsHandler.AdminUserPointsHistory)
 	mux.HandleFunc("/api/admin/org/points/history", s.pointsHandler.AdminOrgPointsHistory)
 
+	mux.HandleFunc("/api/admin/site/config", s.siteConfigHandler.Handle)
+
 	serveHTML := func(filename string) http.HandlerFunc {
 		return func(w http.ResponseWriter, r *http.Request) {
 			r.URL.Path = "/" + filename
@@ -173,6 +176,7 @@ func (s *Server) Start() error {
 	mux.HandleFunc("/profile", serveHTML("profile.html"))
 	mux.HandleFunc("/admin/users", serveHTML("admin/users.html"))
 	mux.HandleFunc("/admin/organizations", serveHTML("admin/organizations.html"))
+	mux.HandleFunc("/admin/site", serveHTML("admin/site.html"))
 
 	htmlRedirects := map[string]string{
 		"/login.html":           "/login",

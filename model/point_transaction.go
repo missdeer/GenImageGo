@@ -17,17 +17,17 @@ const (
 type PointReason string
 
 const (
-	PointReasonDailyLogin     PointReason = "daily_login"
-	PointReasonReferralBonus  PointReason = "referral_bonus"
-	PointReasonReferredBonus  PointReason = "referred_bonus"
-	PointReasonImageGen       PointReason = "image_generation"
-	PointReasonEnhancePrompt  PointReason = "enhance_prompt"
-	PointReasonRefund         PointReason = "refund"
-	PointReasonAdminGrant     PointReason = "admin_grant"
-	PointReasonOrgAllocation  PointReason = "org_allocation"
-	PointReasonOrgInitial     PointReason = "org_initial"
-	PointReasonOrgAdjust      PointReason = "org_adjust"
-	PointReasonOrgAllocOut    PointReason = "org_allocation_out"
+	PointReasonDailyLogin    PointReason = "daily_login"
+	PointReasonReferralBonus PointReason = "referral_bonus"
+	PointReasonReferredBonus PointReason = "referred_bonus"
+	PointReasonImageGen      PointReason = "image_generation"
+	PointReasonEnhancePrompt PointReason = "enhance_prompt"
+	PointReasonRefund        PointReason = "refund"
+	PointReasonAdminGrant    PointReason = "admin_grant"
+	PointReasonOrgAllocation PointReason = "org_allocation"
+	PointReasonOrgInitial    PointReason = "org_initial"
+	PointReasonOrgAdjust     PointReason = "org_adjust"
+	PointReasonOrgAllocOut   PointReason = "org_allocation_out"
 )
 
 type PointTransaction struct {

@@ -11,6 +11,7 @@ import (
 
 	"genimage/model"
 	"genimage/points"
+	"genimage/siteconfig"
 
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
@@ -110,12 +111,12 @@ func isEmailUniqueError(err error) bool {
 }
 
 type Service struct {
-	db               *gorm.DB
-	dailyLoginPoints int
+	db                *gorm.DB
+	siteConfigService *siteconfig.Service
 }
 
-func NewService(db *gorm.DB, dailyLoginPoints int) *Service {
-	return &Service{db: db, dailyLoginPoints: dailyLoginPoints}
+func NewService(db *gorm.DB, siteConfigService *siteconfig.Service) *Service {
+	return &Service{db: db, siteConfigService: siteConfigService}
 }
 
 func (s *Service) Register(email, password, referralCode string) (*model.User, *model.Session, error) {
@@ -288,16 +289,20 @@ func (s *Service) Login(email, password string) (*model.User, *model.Session, er
 		return nil, nil, ErrUserDisabled
 	}
 
-	if s.dailyLoginPoints > 0 && user.EmailVerified && user.Type == model.UserTypeNormal {
+	dailyLoginPoints := 10
+	if s.siteConfigService != nil {
+		dailyLoginPoints = s.siteConfigService.GetInt(model.ConfigKeyDailyLoginPoints, 10)
+	}
+	if dailyLoginPoints > 0 && user.EmailVerified && user.Type == model.UserTypeNormal {
 		now := time.Now().UTC()
 		dateStr := now.Format("2006-01-02")
 		record, err := points.AwardDailyLoginPoints(s.db, points.AwardDailyLoginParams{
 			UserID: user.ID,
-			Amount: s.dailyLoginPoints,
+			Amount: dailyLoginPoints,
 			Date:   dateStr,
 		})
 		if err == nil && record != nil {
-			user.Points += s.dailyLoginPoints
+			user.Points += dailyLoginPoints
 			user.LastPointsDate = &now
 		}
 	}

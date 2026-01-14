@@ -62,6 +62,13 @@ async function initApplication() {
                 if (adminMenuDivider) {
                     adminMenuDivider.style.display = 'block';
                 }
+                // Show site config nav only for super admins (type === 1)
+                if (window.currentUser.is_super_admin) {
+                    const siteConfigNav = document.getElementById('site-config-nav');
+                    if (siteConfigNav) {
+                        siteConfigNav.style.display = 'flex';
+                    }
+                }
             }
         }, 50);
     } else {

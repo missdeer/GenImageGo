@@ -18,14 +18,14 @@ func NewPointsHandler(authService *auth.Service) *PointsHandler {
 }
 
 type pointTransactionItem struct {
-	ID           uint                       `json:"id"`
-	CreatedAt    time.Time                  `json:"created_at"`
-	Amount       int                        `json:"amount"`
-	Reason       model.PointReason          `json:"reason"`
-	ReasonText   string                     `json:"reason_text"`
-	Description  string                     `json:"description,omitempty"`
-	BalanceAfter int                        `json:"balance_after"`
-	RelatedOrgID *uint                      `json:"related_org_id,omitempty"`
+	ID           uint              `json:"id"`
+	CreatedAt    time.Time         `json:"created_at"`
+	Amount       int               `json:"amount"`
+	Reason       model.PointReason `json:"reason"`
+	ReasonText   string            `json:"reason_text"`
+	Description  string            `json:"description,omitempty"`
+	BalanceAfter int               `json:"balance_after"`
+	RelatedOrgID *uint             `json:"related_org_id,omitempty"`
 }
 
 type listPointsHistoryResponse struct {
@@ -264,14 +264,14 @@ func (h *PointsHandler) AdminUserPointsHistory(w http.ResponseWriter, r *http.Re
 }
 
 type orgPointTransactionItem struct {
-	ID            uint                       `json:"id"`
-	CreatedAt     time.Time                  `json:"created_at"`
-	Amount        int                        `json:"amount"`
-	Reason        model.PointReason          `json:"reason"`
-	ReasonText    string                     `json:"reason_text"`
-	Description   string                     `json:"description,omitempty"`
-	BalanceAfter  int                        `json:"balance_after"`
-	RelatedUserID *uint                      `json:"related_user_id,omitempty"`
+	ID            uint              `json:"id"`
+	CreatedAt     time.Time         `json:"created_at"`
+	Amount        int               `json:"amount"`
+	Reason        model.PointReason `json:"reason"`
+	ReasonText    string            `json:"reason_text"`
+	Description   string            `json:"description,omitempty"`
+	BalanceAfter  int               `json:"balance_after"`
+	RelatedUserID *uint             `json:"related_user_id,omitempty"`
 }
 
 type listOrgPointsHistoryResponse struct {

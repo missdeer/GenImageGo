@@ -108,27 +108,27 @@ type SMTPConfig struct {
 
 // Config 表示从 JSON 文件加载的配置
 type Config struct {
-	APIService       string      `json:"api_service,omitempty"`
-	Model            string      `json:"model,omitempty"`
-	TextModel        string      `json:"text_model,omitempty"`
-	BaseURL          string      `json:"base_url,omitempty"`
-	APIKey           string      `json:"api_key,omitempty"`
-	Output           string      `json:"output,omitempty"`
-	Prompt           string      `json:"prompt,omitempty"`
-	PromptFile       string      `json:"prompt_file,omitempty"`
-	Project          string      `json:"project,omitempty"`
-	Location         string      `json:"location,omitempty"`
-	Credentials      string      `json:"credentials,omitempty"`
-	AspectRatio      string      `json:"aspect_ratio,omitempty"`
-	Resolution       string      `json:"resolution,omitempty"`
-	Images           []string    `json:"images,omitempty"`
-	DBType           string      `json:"db_type,omitempty"`
-	DBDSN            string      `json:"db_dsn,omitempty"`
+	APIService            string      `json:"api_service,omitempty"`
+	Model                 string      `json:"model,omitempty"`
+	TextModel             string      `json:"text_model,omitempty"`
+	BaseURL               string      `json:"base_url,omitempty"`
+	APIKey                string      `json:"api_key,omitempty"`
+	Output                string      `json:"output,omitempty"`
+	Prompt                string      `json:"prompt,omitempty"`
+	PromptFile            string      `json:"prompt_file,omitempty"`
+	Project               string      `json:"project,omitempty"`
+	Location              string      `json:"location,omitempty"`
+	Credentials           string      `json:"credentials,omitempty"`
+	AspectRatio           string      `json:"aspect_ratio,omitempty"`
+	Resolution            string      `json:"resolution,omitempty"`
+	Images                []string    `json:"images,omitempty"`
+	DBType                string      `json:"db_type,omitempty"`
+	DBDSN                 string      `json:"db_dsn,omitempty"`
 	SMTP                  *SMTPConfig `json:"smtp,omitempty"`
 	BaseWebURL            string      `json:"base_web_url,omitempty"`
-	DailyLoginPoints      int         `json:"daily_login_points,omitempty"`
-	ImageGenerationPoints int         `json:"image_generation_points,omitempty"`
-	EnhancePromptPoints   int         `json:"enhance_prompt_points,omitempty"`
+	DailyLoginPoints      *int        `json:"daily_login_points,omitempty"`
+	ImageGenerationPoints *int        `json:"image_generation_points,omitempty"`
+	EnhancePromptPoints   *int        `json:"enhance_prompt_points,omitempty"`
 }
 
 // LoadConfig 从 JSON 文件加载配置

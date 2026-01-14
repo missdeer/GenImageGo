@@ -62,7 +62,10 @@ func handleEnhancePrompt(h *Handler, w http.ResponseWriter, r *http.Request) {
 
 	// Step 2: Deduct points (after validation passes)
 	var user *model.User
-	requiredPoints := h.config.EnhancePromptPoints
+	requiredPoints := 4
+	if h.config.SiteConfigService != nil {
+		requiredPoints = h.config.SiteConfigService.GetInt(model.ConfigKeyEnhancePromptPoints, 4)
+	}
 	var deductRecord *model.PointTransaction
 
 	if requiredPoints > 0 && h.db != nil {

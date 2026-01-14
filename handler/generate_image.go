@@ -62,7 +62,10 @@ func handleGenerateImage(h *Handler, w http.ResponseWriter, r *http.Request) {
 
 	// Step 2: Deduct points (after validation passes)
 	var user *model.User
-	requiredPoints := h.config.ImageGenerationPoints
+	requiredPoints := 20
+	if h.config.SiteConfigService != nil {
+		requiredPoints = h.config.SiteConfigService.GetInt(model.ConfigKeyImageGenerationPoints, 20)
+	}
 	var deductRecord *model.PointTransaction
 
 	if requiredPoints > 0 && h.db != nil {
