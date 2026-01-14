@@ -12,13 +12,8 @@
     color: var(--text-main) !important;
 }
 
-[data-theme="dark"] #custom-prompt-modal .slice-close {
-    color: var(--text-sub) !important;
-}
-
-[data-theme="dark"] #custom-prompt-modal .slice-close:hover {
-    background: var(--hover-color) !important;
-    color: var(--text-main) !important;
+[data-theme="dark"] #custom-prompt-modal .slice-back-link {
+    color: var(--primary-color, #4a90d9) !important;
 }
 
 [data-theme="dark"] #custom-prompt-modal [style*="background: #fff"] {

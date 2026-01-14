@@ -1,7 +1,7 @@
     <!-- Banana Prompt Modal -->
     <div id="banana-modal" class="xhs-modal">
         <div class="slice-header-bar">
-            <a class="slice-back-link" onclick="BananaTool.close()">
+            <a href="/" class="slice-back-link" onclick="BananaTool.close(); return false;">
                 <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M19 12H5M12 19l-7-7 7-7"/>
                 </svg>
@@ -23,6 +23,7 @@
                     <span>GitHub</span>
                 </a>
             </div>
+            <div class="slice-header-spacer"></div>
         </div>
         <div
             style="flex: 1; display: flex; flex-direction: column; max-width: 1200px; margin: 0 auto; width: 100%; padding: 24px; overflow-y: auto; padding-top: 80px;">
@@ -59,7 +60,7 @@
     <!-- Custom Prompt Modal -->
     <div id="custom-prompt-modal" class="xhs-modal">
         <div class="slice-header-bar">
-            <a class="slice-back-link" onclick="CustomPromptTool.close()">
+            <a href="/" class="slice-back-link" onclick="CustomPromptTool.close(); return false;">
                 <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M19 12H5M12 19l-7-7 7-7"/>
                 </svg>
@@ -74,6 +75,7 @@
                 </svg>
                 <span>我的提示词</span>
             </div>
+            <div class="slice-header-spacer"></div>
         </div>
         <div
             style="flex: 1; display: flex; flex-direction: column; max-width: 1200px; margin: 0 auto; width: 100%; padding: 24px; overflow-y: auto; padding-top: 80px;">
@@ -149,7 +151,7 @@
     <!-- Slicer Modal -->
     <div id="slice-modal">
         <div class="slice-header-bar">
-            <a class="slice-back-link" onclick="SlicerTool.close()">
+            <a href="/" class="slice-back-link" onclick="SlicerTool.close(); return false;">
                 <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M19 12H5M12 19l-7-7 7-7"/>
                 </svg>
@@ -166,6 +168,7 @@
                 </svg>
                 图片分割工厂
             </div>
+            <div class="slice-header-spacer"></div>
         </div>
         <div class="slice-scroll-area">
             <div class="slice-toolbar">

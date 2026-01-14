@@ -5,6 +5,7 @@
 .slice-title { font-size: 18px; color: #202124; font-weight: 500; display: flex; align-items: center; gap: 10px; }
 .slice-back-link { display: inline-flex; align-items: center; gap: 6px; color: var(--primary-color, #4a90d9); text-decoration: none; font-size: 14px; cursor: pointer; }
 .slice-back-link:hover { text-decoration: underline; }
+.slice-header-spacer { width: 80px; }
 .slice-toolbar { width: 100%; max-width: 1000px; padding: 16px 24px; display: flex; gap: 16px; align-items: center; justify-content: center; flex-wrap: wrap; background: #fff; border-bottom: 1px solid #f0f0f0; margin-bottom: 20px; flex-shrink: 0; }
 .slice-btn-group { display: flex; gap: 4px; background: #f1f3f4; padding: 4px; border-radius: 8px; align-items: center; }
 .radio-label { padding: 6px 12px; cursor: pointer; font-size: 13px; color: #5f6368; border-radius: 6px; transition: all 0.2s; font-weight: 500; display: flex; align-items: center; gap: 6px; }
@@ -46,5 +47,3 @@
 [data-theme="dark"] .slicer-preview-grid { background: var(--input-bg) !important; }
 [data-theme="dark"] .slicer-preview-item { background: var(--card-bg) !important; border-color: var(--border-color) !important; }
 [data-theme="dark"] .slice-title { color: var(--text-main) !important; }
-[data-theme="dark"] .slice-close-btn { color: var(--text-main) !important; background: var(--card-bg) !important; }
-[data-theme="dark"] .slice-close-btn:hover { background: var(--hover-color) !important; }
