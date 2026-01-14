@@ -10,6 +10,11 @@ import (
 	"net/url"
 	"strings"
 	"time"
+
+	"genimage/auth"
+	"genimage/model"
+
+	"gorm.io/gorm"
 )
 
 func handleEnhancePrompt(h *Handler, w http.ResponseWriter, r *http.Request) {
@@ -21,6 +26,7 @@ func handleEnhancePrompt(h *Handler, w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
 	log.Printf("enhance-prompt request from %s", r.RemoteAddr)
 
+	// Step 1: Validate request BEFORE deducting points
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		http.Error(w, "failed to read request body", http.StatusBadRequest)
@@ -45,9 +51,9 @@ func handleEnhancePrompt(h *Handler, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	model := h.config.TextModel
-	if model == "" {
-		model = h.config.DefaultTextModel
+	modelName := h.config.TextModel
+	if modelName == "" {
+		modelName = h.config.DefaultTextModel
 	}
 
 	apiService := h.config.APIService
@@ -55,15 +61,50 @@ func handleEnhancePrompt(h *Handler, w http.ResponseWriter, r *http.Request) {
 		apiService = h.config.DefaultAPIService
 	}
 
+	// Step 2: Deduct points (after validation passes)
+	var user *model.User
+	requiredPoints := h.config.EnhancePromptPoints
+	pointsDeducted := false
+
+	if requiredPoints > 0 && h.db != nil {
+		user = auth.GetUserFromContext(r.Context())
+		if user == nil {
+			writeJSONError(w, http.StatusUnauthorized, "用户未登录")
+			return
+		}
+
+		result := h.db.Model(&model.User{}).
+			Where("id = ? AND points >= ?", user.ID, requiredPoints).
+			UpdateColumn("points", gorm.Expr("points - ?", requiredPoints))
+		if result.Error != nil {
+			log.Printf("enhance-prompt deduct points failed: user=%d err=%v", user.ID, result.Error)
+			writeJSONError(w, http.StatusInternalServerError, "扣除积分失败")
+			return
+		}
+		if result.RowsAffected == 0 {
+			var currentUser model.User
+			h.db.Select("points").First(&currentUser, user.ID)
+			log.Printf("enhance-prompt insufficient points: user=%d current=%d required=%d", user.ID, currentUser.Points, requiredPoints)
+			writeJSONError(w, http.StatusPaymentRequired, fmt.Sprintf("积分不足，当前积分: %d，需要积分: %d", currentUser.Points, requiredPoints))
+			return
+		}
+		pointsDeducted = true
+		log.Printf("enhance-prompt deduct points: user=%d points=%d", user.ID, requiredPoints)
+	}
+
+	// Step 3: Make upstream API request
 	var text string
 	switch apiService {
 	case "openai":
-		text, err = h.enhancePromptViaOpenAI(r, reqPrompt, systemPrompt, model, apiKey, start)
+		text, err = h.enhancePromptViaOpenAI(r, reqPrompt, systemPrompt, modelName, apiKey, start)
 	default:
-		text, err = h.enhancePromptViaGemini(r, reqPrompt, systemPrompt, model, apiKey, start)
+		text, err = h.enhancePromptViaGemini(r, reqPrompt, systemPrompt, modelName, apiKey, start)
 	}
 
 	if err != nil {
+		if pointsDeducted && user != nil {
+			refundPoints(h.db, user.ID, requiredPoints, "enhance-prompt")
+		}
 		http.Error(w, err.Error(), http.StatusBadGateway)
 		return
 	}

@@ -32,22 +32,33 @@ type Server struct {
 }
 
 type ServerConfig struct {
-	APIService       string
-	Model            string
-	TextModel        string
-	BaseURL          string
-	APIKey           string
-	ModelSource      string
-	BaseURLSource    string
-	APIKeySource     string
-	SMTP             *SMTPConfig
-	BaseWebURL       string
-	DailyLoginPoints int
-	SecureCookies    bool // Set to true for HTTPS production
+	APIService            string
+	Model                 string
+	TextModel             string
+	BaseURL               string
+	APIKey                string
+	ModelSource           string
+	BaseURLSource         string
+	APIKeySource          string
+	SMTP                  *SMTPConfig
+	BaseWebURL            string
+	DailyLoginPoints      int
+	ImageGenerationPoints int
+	EnhancePromptPoints   int
+	SecureCookies         bool // Set to true for HTTPS production
 }
 
 func NewServer(addr, staticDir string, config ServerConfig, db *gorm.DB) *Server {
 	enhancePromptText := embeddedEnhancePrompt
+
+	imageGenerationPoints := config.ImageGenerationPoints
+	if imageGenerationPoints == 0 {
+		imageGenerationPoints = 20
+	}
+	enhancePromptPoints := config.EnhancePromptPoints
+	if enhancePromptPoints == 0 {
+		enhancePromptPoints = 4
+	}
 
 	h := handler.New(handler.Config{
 		APIService:    config.APIService,
@@ -65,7 +76,10 @@ func NewServer(addr, staticDir string, config ServerConfig, db *gorm.DB) *Server
 		DefaultBaseURL:    Defaults.BaseURL,
 		DefaultAPIKey:     Defaults.APIKey,
 		EnhancePromptText: enhancePromptText,
-	})
+
+		ImageGenerationPoints: imageGenerationPoints,
+		EnhancePromptPoints:   enhancePromptPoints,
+	}, db)
 
 	authService := auth.NewService(db, config.DailyLoginPoints)
 

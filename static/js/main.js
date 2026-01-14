@@ -185,7 +185,12 @@ let UI = {};
             if (!resp.ok) {
                 const errText = await resp.text();
                 console.log('enhancePrompt: error response:', errText);
-                throw new Error(errText || resp.statusText);
+                let errMsg = errText || resp.statusText;
+                try {
+                    const jsonErr = JSON.parse(errText);
+                    if (jsonErr.error && jsonErr.error.message) errMsg = jsonErr.error.message;
+                } catch (_) {}
+                throw new Error(errMsg);
             }
             const result = await resp.text();
             console.log('enhancePrompt: result text:', result);

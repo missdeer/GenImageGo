@@ -17,6 +17,8 @@
   "base_web_url": "https://your-domain.com",
   "secure_cookies": true,
   "daily_login_points": 10,
+  "image_generation_points": 20,
+  "enhance_prompt_points": 4,
 
   "smtp": {
     "host": "smtp.example.com",

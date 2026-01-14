@@ -124,9 +124,11 @@ type Config struct {
 	Images           []string    `json:"images,omitempty"`
 	DBType           string      `json:"db_type,omitempty"`
 	DBDSN            string      `json:"db_dsn,omitempty"`
-	SMTP             *SMTPConfig `json:"smtp,omitempty"`
-	BaseWebURL       string      `json:"base_web_url,omitempty"`
-	DailyLoginPoints int         `json:"daily_login_points,omitempty"`
+	SMTP                  *SMTPConfig `json:"smtp,omitempty"`
+	BaseWebURL            string      `json:"base_web_url,omitempty"`
+	DailyLoginPoints      int         `json:"daily_login_points,omitempty"`
+	ImageGenerationPoints int         `json:"image_generation_points,omitempty"`
+	EnhancePromptPoints   int         `json:"enhance_prompt_points,omitempty"`
 }
 
 // LoadConfig 从 JSON 文件加载配置
