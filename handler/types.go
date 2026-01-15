@@ -18,11 +18,24 @@ type geminiContent struct {
 }
 
 type geminiPart struct {
-	Text string `json:"text,omitempty"`
+	Text       string           `json:"text,omitempty"`
+	InlineData *geminiInlineData `json:"inline_data,omitempty"`
+}
+
+type geminiInlineData struct {
+	MIMEType string `json:"mime_type"`
+	Data     string `json:"data"`
 }
 
 type geminiGenerationConfig struct {
-	ResponseMIMEType string `json:"responseMimeType,omitempty"`
+	ResponseMIMEType   string            `json:"responseMimeType,omitempty"`
+	ResponseModalities []string          `json:"responseModalities,omitempty"`
+	ImageConfig        *geminiImageConfig `json:"imageConfig,omitempty"`
+}
+
+type geminiImageConfig struct {
+	AspectRatio string `json:"aspectRatio,omitempty"`
+	ImageSize   string `json:"imageSize,omitempty"`
 }
 
 type geminiResponse struct {
@@ -31,7 +44,22 @@ type geminiResponse struct {
 }
 
 type geminiCandidate struct {
-	Content *geminiContent `json:"content,omitempty"`
+	Content *geminiResponseContent `json:"content,omitempty"`
+}
+
+type geminiResponseContent struct {
+	Role  string              `json:"role,omitempty"`
+	Parts []geminiResponsePart `json:"parts"`
+}
+
+type geminiResponsePart struct {
+	Text       string                   `json:"text,omitempty"`
+	InlineData *geminiResponseInlineData `json:"inlineData,omitempty"`
+}
+
+type geminiResponseInlineData struct {
+	MIMEType string `json:"mimeType"`
+	Data     string `json:"data"`
 }
 
 type geminiError struct {
