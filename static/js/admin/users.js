@@ -118,7 +118,8 @@
                         actions += `<button class="action-btn delete" data-action="delete-user" data-user-id="${user.id}">删除</button>`;
                     }
                 } else if (isSelf) {
-                    actions = '<span style="color:var(--text-secondary);font-size:12px;">当前用户</span>';
+                    actions = `<button class="action-btn points" data-action="open-points" data-user-id="${user.id}">积分</button>`;
+                    actions += '<span style="color:var(--text-secondary);font-size:12px;margin-left:8px;">当前用户</span>';
                 }
 
                 tr.innerHTML = `
