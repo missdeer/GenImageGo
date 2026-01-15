@@ -12,7 +12,7 @@ else
   ARCH="arm64"
 fi
 
-env GOARCH=$CURARCH go build -ldflags="-s -w" -o genImage-darwin-$CURARCH
-env GOARCH=$ARCH go build -ldflags="-s -w" -o genImage-darwin-$ARCH
+env GOARCH=$CURARCH go build -ldflags="-s -w" -o genImage-darwin-$CURARCH $*
+env GOARCH=$ARCH go build -ldflags="-s -w" -o genImage-darwin-$ARCH $*
 lipo -create -output genImage genImage-darwin-$CURARCH genImage-darwin-$ARCH
 rm genImage-darwin-$CURARCH genImage-darwin-$ARCH
