@@ -30,6 +30,7 @@ type Server struct {
 	pointsHandler     *handler.PointsHandler
 	siteConfigHandler *handler.SiteConfigHandler
 	redeemHandler     *handler.RedeemHandler
+	promptHandler     *handler.PromptHandler
 	authService       *auth.Service
 	siteConfigService *siteconfig.Service
 	overrideConfig    siteconfig.OverrideConfig
@@ -97,6 +98,7 @@ func NewServer(addr, staticDir string, config ServerConfig, db *gorm.DB, siteCon
 	pointsHandler := handler.NewPointsHandler(authService)
 	siteConfigHandler := handler.NewSiteConfigHandler(authService, siteConfigService)
 	redeemHandler := handler.NewRedeemHandler(authService)
+	promptHandler := handler.NewPromptHandler(authService)
 
 	return &Server{
 		addr:              addr,
@@ -108,6 +110,7 @@ func NewServer(addr, staticDir string, config ServerConfig, db *gorm.DB, siteCon
 		pointsHandler:     pointsHandler,
 		siteConfigHandler: siteConfigHandler,
 		redeemHandler:     redeemHandler,
+		promptHandler:     promptHandler,
 		authService:       authService,
 		siteConfigService: siteConfigService,
 		overrideConfig:    overrideConfig,
@@ -171,6 +174,18 @@ func (s *Server) Start() error {
 	mux.HandleFunc("/api/admin/redeem-codes/enable", s.redeemHandler.EnableCode)
 	mux.HandleFunc("/api/user/redeem", s.redeemHandler.Redeem)
 	mux.HandleFunc("/api/user/managed-orgs", s.redeemHandler.GetManagedOrgs)
+
+	mux.HandleFunc("/api/user/prompts", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet {
+			s.promptHandler.List(w, r)
+		} else if r.Method == http.MethodPost {
+			s.promptHandler.Create(w, r)
+		} else {
+			http.Error(w, "方法不允许", http.StatusMethodNotAllowed)
+		}
+	})
+	mux.HandleFunc("/api/user/prompts/update", s.promptHandler.Update)
+	mux.HandleFunc("/api/user/prompts/delete", s.promptHandler.Delete)
 
 	serveHTML := func(filename string) http.HandlerFunc {
 		return func(w http.ResponseWriter, r *http.Request) {

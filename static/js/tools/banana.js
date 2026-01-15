@@ -168,7 +168,7 @@
             }
         },
         // 保存到我的提示词
-        saveToCustom(encodedTitle, encodedPrompt) {
+        async saveToCustom(encodedTitle, encodedPrompt) {
             const title = decodeURIComponent(encodedTitle);
             const prompt = decodeURIComponent(encodedPrompt);
 
@@ -186,16 +186,32 @@
                 return;
             }
 
-            // 添加到我的提示词
-            CustomPromptTool.allPrompts.unshift({
-                id: 'prompt_' + Date.now(),
-                title: title,
-                content: prompt,
-                createdAt: Date.now(),
-                updatedAt: Date.now()
-            });
+            // 调用后端 API 保存
+            try {
+                const clientId = CustomPromptTool.generateUUID();
+                const response = await fetch('/api/user/prompts', {
+                    method: 'POST',
+                    headers: csrfHeaders({ 'Content-Type': 'application/json' }),
+                    credentials: 'include',
+                    body: JSON.stringify({ client_id: clientId, title, content: prompt })
+                });
 
-            CustomPromptTool.savePrompts();
-            showToast('已保存到我的提示词 ✓', 'success', 2000);
+                if (response.status === 401) {
+                    showToast('请先登录', 'warning');
+                    return;
+                }
+
+                if (!response.ok) {
+                    const data = await response.json();
+                    throw new Error(data.error || '保存失败');
+                }
+
+                // 刷新列表
+                await CustomPromptTool.loadPrompts();
+                showToast('已保存到我的提示词 ✓', 'success', 2000);
+            } catch (e) {
+                console.error('Failed to save prompt:', e);
+                showToast(e.message || '保存失败', 'error');
+            }
         }
     };

@@ -142,7 +142,7 @@ func InitDB(dbType, dsn string) (*gorm.DB, error) {
 		return nil, fmt.Errorf("无法连接数据库: %w", err)
 	}
 
-	if err := db.AutoMigrate(&User{}, &Session{}, &PasswordResetToken{}, &EmailVerificationToken{}, &Organization{}, &Membership{}, &IdempotencyKey{}, &PointTransaction{}, &SiteConfig{}, &RedeemCode{}); err != nil {
+	if err := db.AutoMigrate(&User{}, &Session{}, &PasswordResetToken{}, &EmailVerificationToken{}, &Organization{}, &Membership{}, &IdempotencyKey{}, &PointTransaction{}, &SiteConfig{}, &RedeemCode{}, &CustomPrompt{}); err != nil {
 		return nil, fmt.Errorf("数据库迁移失败: %w", err)
 	}
 
