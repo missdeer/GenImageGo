@@ -23,7 +23,7 @@
 
         loadPrompts() {
             try {
-                this.allPrompts = JSON.parse(localStorage.getItem('custom_prompts') || '[]');
+                this.allPrompts = JSON.parse(getUserStorage('custom_prompts') || '[]');
             } catch (e) {
                 console.error('Failed to load custom prompts:', e);
                 this.allPrompts = [];
@@ -32,7 +32,7 @@
 
         savePrompts() {
             try {
-                localStorage.setItem('custom_prompts', JSON.stringify(this.allPrompts));
+                setUserStorage('custom_prompts', JSON.stringify(this.allPrompts));
             } catch (e) {
                 console.error('Failed to save custom prompts:', e);
                 showToast('保存失败', 'error');

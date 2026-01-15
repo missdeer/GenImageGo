@@ -19,13 +19,13 @@ const FileSystemManager = {
         const autoSaveToggle = document.getElementById('auto-save-toggle');
         if (autoSaveToggle) {
             // 加载保存的设置
-            const saved = localStorage.getItem('auto_save_enabled');
+            const saved = getUserStorage('auto_save_enabled');
             if (saved === 'true') {
                 // 检查目录句柄是否存在（刷新页面后会丢失）
                 if (!this.directoryHandle) {
                     // 目录句柄丢失，重置状态并提示用户
                     console.warn('⚠️ 目录句柄丢失，需要重新选择目录');
-                    localStorage.removeItem('auto_save_enabled');
+                    setUserStorage('auto_save_enabled', '');
                     autoSaveToggle.checked = false;
                     this.isEnabled = false;
 
@@ -46,13 +46,13 @@ const FileSystemManager = {
             // 监听开关变化
             autoSaveToggle.addEventListener('change', (e) => {
                 this.isEnabled = e.target.checked;
-                localStorage.setItem('auto_save_enabled', e.target.checked);
+                setUserStorage('auto_save_enabled', e.target.checked ? 'true' : '');
 
                 if (e.target.checked && !this.directoryHandle) {
                     showToast('请先选择保存目录', 'warning');
                     e.target.checked = false;
                     this.isEnabled = false;
-                    localStorage.removeItem('auto_save_enabled');
+                    setUserStorage('auto_save_enabled', '');
                 }
             });
         }
@@ -86,7 +86,7 @@ const FileSystemManager = {
             if (autoSaveToggle && !autoSaveToggle.checked) {
                 autoSaveToggle.checked = true;
                 this.isEnabled = true;
-                localStorage.setItem('auto_save_enabled', 'true');
+                setUserStorage('auto_save_enabled', 'true');
             }
         } catch (error) {
             if (error.name !== 'AbortError') {

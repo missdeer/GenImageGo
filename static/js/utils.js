@@ -13,6 +13,26 @@ function csrfHeaders(extraHeaders = {}) {
     };
 }
 
+// 用户隔离的localStorage工具函数
+function getUserStorageKey(key) {
+    const userId = window.currentUser && window.currentUser.id;
+    if (!userId) return null;
+    return `user_${userId}_${key}`;
+}
+
+function getUserStorage(key, defaultValue = null) {
+    const storageKey = getUserStorageKey(key);
+    if (!storageKey) return defaultValue;
+    const value = localStorage.getItem(storageKey);
+    return value !== null ? value : defaultValue;
+}
+
+function setUserStorage(key, value) {
+    const storageKey = getUserStorageKey(key);
+    if (!storageKey) return;
+    localStorage.setItem(storageKey, value);
+}
+
 // 保存原生 fetch，绕过扩展拦截（修复 ERR_SSL_PROTOCOL_ERROR）
 const nativeFetch = window.fetch.bind(window);
 
@@ -69,30 +89,32 @@ function toggleLeftSidebarDesktop(){
     const isCollapsed = leftSidebar.classList.toggle('collapsed');
     const btn = document.getElementById('left-sidebar-toggle');
     if(btn) btn.classList.toggle('active', isCollapsed);
-    localStorage.setItem('left_sidebar_collapsed', isCollapsed);
+    setUserStorage('left_sidebar_collapsed', isCollapsed);
 }
 
 function toggleRightSidebarDesktop(){
     const isCollapsed = rightSidebar.classList.toggle('collapsed');
     const btn = document.getElementById('right-sidebar-toggle');
     if(btn) btn.classList.toggle('active', isCollapsed);
-    localStorage.setItem('right_sidebar_collapsed', isCollapsed);
+    setUserStorage('right_sidebar_collapsed', isCollapsed);
 }
 
 function restoreSidebarState(){
-    if(localStorage.getItem('left_sidebar_collapsed') === 'true'){
+    if (!window.currentUser) return;
+    if(getUserStorage('left_sidebar_collapsed') === 'true'){
         leftSidebar.classList.add('collapsed');
         const btn = document.getElementById('left-sidebar-toggle');
         if(btn) btn.classList.add('active');
     }
-    if(localStorage.getItem('right_sidebar_collapsed') === 'true'){
+    if(getUserStorage('right_sidebar_collapsed') === 'true'){
         rightSidebar.classList.add('collapsed');
         const btn = document.getElementById('right-sidebar-toggle');
         if(btn) btn.classList.add('active');
     }
 }
 
-document.addEventListener('DOMContentLoaded', () => setTimeout(restoreSidebarState, 100));
+// restoreSidebarState 需要在用户认证完成后调用，由 main.js 的 initializeApp() 触发
+// 不再自动在 DOMContentLoaded 时执行，避免在 window.currentUser 未设置时读取错误的key
 
 // ===== 事件委托系统 - 动作注册表 =====
 // 在 utils.js 中定义（最先加载），供其他模块使用

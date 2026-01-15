@@ -102,6 +102,8 @@ async function handleRegister(email, password, referralCode = '') {
 
 async function handleLogout() {
     try {
+        if (typeof closeDB === 'function') closeDB();
+        window.currentUser = null;
         await fetch('/api/auth/logout', {
             method: 'POST',
             headers: { 'X-CSRF-Token': getCSRFToken() }

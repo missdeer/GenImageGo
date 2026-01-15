@@ -147,16 +147,40 @@ const SmartProgressBar = {
 };
 
 // 主题切换功能
-function initTheme() {
-    const savedTheme = localStorage.getItem('theme') || 'light';
+function applyUserTheme() {
+    const savedTheme = getUserStorage('theme') || 'light';
     document.documentElement.setAttribute('data-theme', savedTheme);
+}
+
+function initTheme() {
+    if (window.currentUser) {
+        applyUserTheme();
+        return;
+    }
+
+    const fallbackTheme = localStorage.getItem('theme') || 'light';
+    document.documentElement.setAttribute('data-theme', fallbackTheme);
+
+    let attempts = 0;
+    const maxAttempts = 40;
+    const waitForUser = () => {
+        if (window.currentUser) {
+            applyUserTheme();
+            return;
+        }
+        attempts += 1;
+        if (attempts < maxAttempts) {
+            setTimeout(waitForUser, 50);
+        }
+    };
+    waitForUser();
 }
 
 function toggleTheme() {
     const currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
     const newTheme = currentTheme === 'light' ? 'dark' : 'light';
     document.documentElement.setAttribute('data-theme', newTheme);
-    localStorage.setItem('theme', newTheme);
+    setUserStorage('theme', newTheme);
     showToast(newTheme === 'dark' ? '已切换到暗黑模式 🌙' : '已切换到明亮模式 ☀️', 'success');
 }
 

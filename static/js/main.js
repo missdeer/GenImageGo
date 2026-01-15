@@ -19,7 +19,12 @@ let UI = {};
         BananaTool.init();
         CustomPromptTool.init();
         FileSystemManager.init();
-        
+
+        // Restore sidebar state (must be after user auth is complete)
+        if (typeof restoreSidebarState === 'function') {
+            restoreSidebarState();
+        }
+
         // Initialize DB and Sessions
         await initDB();
         await renderSessionList();
@@ -30,28 +35,28 @@ let UI = {};
         // UI Event Listeners
         const streamToggle = document.getElementById('stream-toggle');
         if (streamToggle) {
-            streamToggle.checked = localStorage.getItem('use_streaming') === 'true';
+            streamToggle.checked = getUserStorage('use_streaming') === 'true';
             state.useStreaming = streamToggle.checked;
             streamToggle.addEventListener('change', () => {
                 state.useStreaming = streamToggle.checked;
-                localStorage.setItem('use_streaming', streamToggle.checked);
+                setUserStorage('use_streaming', streamToggle.checked);
             });
         }
 
         const contextToggle = document.getElementById('context-toggle');
         const contextCount = document.getElementById('context-count');
         if (contextToggle && contextCount) {
-            contextToggle.checked = localStorage.getItem('use_context') === 'true';
+            contextToggle.checked = getUserStorage('use_context') === 'true';
             state.useContext = contextToggle.checked;
-            state.contextCount = parseInt(localStorage.getItem('context_count') || '5');
+            state.contextCount = parseInt(getUserStorage('context_count') || '5');
             contextCount.value = state.contextCount;
             contextToggle.addEventListener('change', () => {
                 state.useContext = contextToggle.checked;
-                localStorage.setItem('use_context', contextToggle.checked);
+                setUserStorage('use_context', contextToggle.checked);
             });
             contextCount.addEventListener('change', () => {
                 state.contextCount = parseInt(contextCount.value);
-                localStorage.setItem('context_count', contextCount.value);
+                setUserStorage('context_count', contextCount.value);
             });
         }
 
