@@ -74,17 +74,22 @@
 
 .btn-primary {
     padding: 8px 16px;
-    background: var(--accent-color);
+    background: #3b82f6;
     color: white;
     border: none;
     border-radius: 6px;
     font-size: 14px;
     cursor: pointer;
-    transition: opacity 0.2s;
+    transition: background 0.2s;
 }
 
 .btn-primary:hover {
-    opacity: 0.9;
+    background: #2563eb;
+}
+
+.btn-primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
 }
 
 .btn-secondary {

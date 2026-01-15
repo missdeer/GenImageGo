@@ -48,6 +48,8 @@ var reasonTextMap = map[model.PointReason]string{
 	model.PointReasonOrgInitial:    "组织初始积分",
 	model.PointReasonOrgAdjust:     "组织积分调整",
 	model.PointReasonOrgAllocOut:   "组织划拨支出",
+	model.PointReasonRedeemCode:    "兑换码充值",
+	model.PointReasonRedeemCodeOrg: "兑换码充值",
 }
 
 func (h *PointsHandler) UserPointsHistory(w http.ResponseWriter, r *http.Request) {

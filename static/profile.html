@@ -111,6 +111,62 @@
             text-align: center;
             padding: 16px;
         }
+        .redeem-section {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .redeem-form {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: flex-end;
+        }
+        .redeem-form .form-group {
+            flex: 1;
+            min-width: 200px;
+        }
+        .redeem-form select {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid var(--border-color, #e0e0e0);
+            border-radius: 6px;
+            background: var(--input-bg, #fff);
+            color: var(--text-primary, #333);
+            font-size: 14px;
+        }
+        .redeem-btn {
+            padding: 10px 20px;
+            background: var(--primary-color, #4a90d9);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            white-space: nowrap;
+        }
+        .redeem-btn:hover {
+            opacity: 0.9;
+        }
+        .redeem-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .redeem-result {
+            padding: 12px;
+            border-radius: 6px;
+            display: none;
+        }
+        .redeem-result.success {
+            background: #dcfce7;
+            color: #166534;
+            display: block;
+        }
+        .redeem-result.error {
+            background: #fef2f2;
+            color: #dc2626;
+            display: block;
+        }
         .back-link {
             display: inline-flex;
             align-items: center;
@@ -178,6 +234,26 @@
                 <div class="section-title">所属组织</div>
                 <div class="org-list" id="org-list">
                     <div class="no-org">加载中...</div>
+                </div>
+            </div>
+
+            <div class="profile-section">
+                <div class="section-title">兑换码兑换</div>
+                <div class="redeem-section">
+                    <div class="redeem-form">
+                        <div class="form-group">
+                            <label for="redeem-code">兑换码</label>
+                            <input type="text" id="redeem-code" placeholder="请输入兑换码" style="text-transform:uppercase;">
+                        </div>
+                        <div class="form-group" id="target-select-group" style="display:none;">
+                            <label for="redeem-target">兑换到</label>
+                            <select id="redeem-target">
+                                <option value="user">个人积分</option>
+                            </select>
+                        </div>
+                        <button class="redeem-btn" id="redeem-btn" onclick="redeemCode()">兑换</button>
+                    </div>
+                    <div id="redeem-result" class="redeem-result"></div>
                 </div>
             </div>
 
@@ -341,7 +417,90 @@
             return match ? match[1] : '';
         }
 
+        let managedOrgs = [];
+
+        async function loadManagedOrgs() {
+            try {
+                const resp = await fetch('/api/user/managed-orgs');
+                if (resp.ok) {
+                    const data = await resp.json();
+                    managedOrgs = data.organizations || [];
+                    if (managedOrgs.length > 0) {
+                        const select = document.getElementById('redeem-target');
+                        managedOrgs.forEach(org => {
+                            const option = document.createElement('option');
+                            option.value = 'org:' + org.id;
+                            option.textContent = org.name + ' (组织)';
+                            select.appendChild(option);
+                        });
+                        document.getElementById('target-select-group').style.display = 'block';
+                    }
+                }
+            } catch (e) {
+                console.error('Failed to load managed orgs:', e);
+            }
+        }
+
+        async function redeemCode() {
+            const code = document.getElementById('redeem-code').value.trim();
+            if (!code) {
+                showRedeemResult('请输入兑换码', false);
+                return;
+            }
+
+            const targetValue = document.getElementById('redeem-target').value;
+            let targetType = 'user';
+            let targetOrgId = 0;
+
+            if (targetValue.startsWith('org:')) {
+                targetType = 'org';
+                targetOrgId = parseInt(targetValue.split(':')[1]);
+            }
+
+            const btn = document.getElementById('redeem-btn');
+            btn.disabled = true;
+            btn.textContent = '兑换中...';
+
+            try {
+                const resp = await fetch('/api/user/redeem', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': getCSRFToken()
+                    },
+                    body: JSON.stringify({
+                        code: code,
+                        target_type: targetType,
+                        target_org_id: targetOrgId
+                    })
+                });
+
+                const data = await resp.json();
+
+                if (resp.ok) {
+                    const target = targetType === 'user' ? '个人账户' : '组织账户';
+                    showRedeemResult(`兑换成功！获得 ${data.points} 积分，${target}当前余额: ${data.new_balance}`, true);
+                    document.getElementById('redeem-code').value = '';
+                    loadProfile();
+                } else {
+                    showRedeemResult(data.error || '兑换失败', false);
+                }
+            } catch (e) {
+                showRedeemResult('网络错误，请重试', false);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '兑换';
+            }
+        }
+
+        function showRedeemResult(message, success) {
+            const el = document.getElementById('redeem-result');
+            el.textContent = message;
+            el.className = 'redeem-result ' + (success ? 'success' : 'error');
+        }
+
         loadProfile();
+        loadManagedOrgs();
     </script>
 </body>
 </html>

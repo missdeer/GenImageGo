@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>兑换码管理 - Image Go</title>
+    <link rel="stylesheet" href="../css/variables.css">
+    <link rel="stylesheet" href="../css/auth.css">
+    <link rel="stylesheet" href="../css/admin.css">
+    <script>
+        (function() {
+            const theme = localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-theme', theme);
+        })();
+    </script>
+    <style>
+        .generate-form {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .generate-form h3 {
+            margin: 0 0 15px 0;
+            color: var(--text-primary);
+        }
+        .form-row {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            align-items: flex-end;
+        }
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        .form-group label {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+        .form-group input {
+            padding: 8px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            background: var(--input-bg);
+            color: var(--text-primary);
+            width: 120px;
+        }
+        .form-group input[type="text"] {
+            width: 200px;
+        }
+        .codes-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: var(--card-bg);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .codes-table th,
+        .codes-table td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .codes-table th {
+            background: var(--bg-secondary);
+            font-weight: 500;
+            color: var(--text-secondary);
+            font-size: 13px;
+        }
+        .codes-table td {
+            color: var(--text-primary);
+        }
+        .code-text {
+            font-family: monospace;
+            font-size: 14px;
+            background: var(--bg-secondary);
+            padding: 4px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .code-text:hover {
+            background: var(--border-color);
+        }
+        .status-active {
+            color: #22c55e;
+        }
+        .status-redeemed {
+            color: #6b7280;
+        }
+        .status-disabled {
+            color: #ef4444;
+        }
+        .filter-bar {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 15px;
+            align-items: center;
+        }
+        .filter-bar select,
+        .filter-bar input {
+            padding: 8px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            background: var(--input-bg);
+            color: var(--text-primary);
+        }
+        .filter-bar input[type="date"] {
+            width: 130px;
+        }
+        .filter-group {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .filter-group label {
+            font-size: 13px;
+            color: var(--text-secondary);
+            white-space: nowrap;
+        }
+        .filter-group span {
+            color: var(--text-secondary);
+        }
+        .btn-filter {
+            padding: 8px 12px;
+            font-size: 13px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            background: var(--card-bg);
+            color: var(--text-primary);
+            cursor: pointer;
+        }
+        .btn-filter:hover {
+            background: var(--bg-secondary);
+        }
+        .btn-reset {
+            padding: 8px 12px;
+            font-size: 13px;
+            border: 1px solid #ef4444;
+            border-radius: 6px;
+            background: transparent;
+            color: #ef4444;
+            cursor: pointer;
+        }
+        .btn-reset:hover {
+            background: #ef444410;
+        }
+        .pagination {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        .pagination button {
+            padding: 8px 16px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            background: var(--card-bg);
+            color: var(--text-primary);
+            cursor: pointer;
+        }
+        .pagination button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .pagination button:hover:not(:disabled) {
+            background: var(--bg-secondary);
+        }
+        .btn-copy {
+            padding: 4px 8px;
+            font-size: 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            background: var(--card-bg);
+            color: var(--text-primary);
+            cursor: pointer;
+        }
+        .btn-copy:hover {
+            background: var(--bg-secondary);
+        }
+        .btn-disable {
+            padding: 4px 8px;
+            font-size: 12px;
+            border: 1px solid #ef4444;
+            border-radius: 4px;
+            background: transparent;
+            color: #ef4444;
+            cursor: pointer;
+        }
+        .btn-disable:hover {
+            background: #ef444410;
+        }
+        .btn-enable {
+            padding: 4px 8px;
+            font-size: 12px;
+            border: 1px solid #22c55e;
+            border-radius: 4px;
+            background: transparent;
+            color: #22c55e;
+            cursor: pointer;
+        }
+        .btn-enable:hover {
+            background: #22c55e10;
+        }
+        .generated-codes {
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 15px;
+        }
+        .generated-codes h4 {
+            margin: 0 0 10px 0;
+            color: var(--text-primary);
+        }
+        .generated-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #22c55e;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 6px;
+            display: none;
+            z-index: 1000;
+        }
+        .toast.show {
+            display: block;
+            animation: fadeInOut 2s ease;
+        }
+        @keyframes fadeInOut {
+            0% { opacity: 0; transform: translateY(20px); }
+            15% { opacity: 1; transform: translateY(0); }
+            85% { opacity: 1; transform: translateY(0); }
+            100% { opacity: 0; transform: translateY(-20px); }
+        }
+    </style>
+</head>
+<body>
+    <div class="admin-container">
+        <a href="/" class="back-link">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M19 12H5M12 19l-7-7 7-7"/>
+            </svg>
+            返回首页
+        </a>
+        <div class="admin-header">
+            <h1>兑换码管理</h1>
+        </div>
+
+        <div class="admin-content">
+            <div id="loading" class="loading">加载中...</div>
+            <div id="error-message" class="error-message"></div>
+            <div id="no-permission" class="no-permission" style="display:none;">
+                <p>您没有权限访问此页面</p>
+                <a href="/">返回首页</a>
+            </div>
+
+            <div id="main-content" style="display:none;">
+                <div class="generate-form">
+                    <h3>生成兑换码</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>积分面值 (1-100000)</label>
+                            <input type="number" id="points" min="1" max="100000" value="10" placeholder="积分">
+                        </div>
+                        <div class="form-group">
+                            <label>数量 (1-1000)</label>
+                            <input type="number" id="count" min="1" max="1000" value="1" placeholder="数量">
+                        </div>
+                        <div class="form-group">
+                            <label>备注 (可选, 最多200字符)</label>
+                            <input type="text" id="note" placeholder="如: 活动奖励" maxlength="200">
+                        </div>
+                        <button id="generate-btn" class="btn-primary" onclick="generateCodes()">生成</button>
+                    </div>
+                    <div class="form-hint" style="margin-top:8px;font-size:12px;color:var(--text-secondary);">
+                        单次生成总额不能超过 1,000,000 积分（面值 × 数量 ≤ 1,000,000）
+                    </div>
+                    <div id="generated-codes" class="generated-codes" style="display:none;">
+                        <h4>已生成的兑换码 <button class="btn-copy" onclick="copyAllCodes()">复制全部</button></h4>
+                        <div id="generated-list" class="generated-list"></div>
+                    </div>
+                </div>
+
+                <div class="filter-bar" style="flex-wrap: wrap;">
+                    <div class="filter-group">
+                        <label>状态:</label>
+                        <select id="status-filter" onchange="loadCodes()">
+                            <option value="">全部</option>
+                            <option value="0">未使用</option>
+                            <option value="1">已兑换</option>
+                            <option value="2">已禁用</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>积分:</label>
+                        <input type="number" id="points-filter" placeholder="积分值" style="width:80px;" onchange="loadCodes()">
+                    </div>
+                    <div class="filter-group">
+                        <label>创建时间:</label>
+                        <input type="date" id="created-start" onchange="loadCodes()">
+                        <span>-</span>
+                        <input type="date" id="created-end" onchange="loadCodes()">
+                    </div>
+                    <div class="filter-group">
+                        <label>兑换人:</label>
+                        <input type="text" id="redeemed-by-filter" placeholder="邮箱" style="width:150px;">
+                        <button class="btn-filter" onclick="loadCodes()">搜索</button>
+                    </div>
+                    <div class="filter-group">
+                        <label>兑换时间:</label>
+                        <input type="date" id="redeemed-start" onchange="loadCodes()">
+                        <span>-</span>
+                        <input type="date" id="redeemed-end" onchange="loadCodes()">
+                    </div>
+                    <button class="btn-reset" onclick="resetFilters()">重置</button>
+                </div>
+
+                <table class="codes-table">
+                    <thead>
+                        <tr>
+                            <th>兑换码</th>
+                            <th>积分</th>
+                            <th>状态</th>
+                            <th>创建时间</th>
+                            <th>备注</th>
+                            <th>兑换信息</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="codes-list"></tbody>
+                </table>
+
+                <div class="pagination" id="pagination"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="theme-toggle" onclick="toggleTheme()">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="5"></circle>
+            <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"></path>
+        </svg>
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <script src="../js/auth.js"></script>
+    <script>
+        let currentPage = 1;
+        let generatedCodes = [];
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        async function checkAccess() {
+            try {
+                const response = await fetch('/api/auth/me', { credentials: 'include' });
+                if (!response.ok) {
+                    window.location.href = '/login';
+                    return;
+                }
+                const user = await response.json();
+                if (user.type !== 1) {
+                    document.getElementById('loading').style.display = 'none';
+                    document.getElementById('no-permission').style.display = 'block';
+                    return;
+                }
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('main-content').style.display = 'block';
+                loadCodes();
+            } catch (e) {
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('error-message').textContent = '加载失败';
+            }
+        }
+
+        async function generateCodes() {
+            const points = parseInt(document.getElementById('points').value);
+            const count = parseInt(document.getElementById('count').value);
+            const note = document.getElementById('note').value;
+
+            if (points <= 0 || points > 100000) {
+                showToast('积分值必须在1-100000之间', 'error');
+                return;
+            }
+            if (count <= 0 || count > 1000) {
+                showToast('数量必须在1-1000之间', 'error');
+                return;
+            }
+            if (points * count > 1000000) {
+                showToast('单次生成总额不能超过1000000积分', 'error');
+                return;
+            }
+
+            const btn = document.getElementById('generate-btn');
+            btn.disabled = true;
+            btn.textContent = '生成中...';
+
+            try {
+                const response = await fetch('/api/admin/redeem-codes/generate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': getCSRFToken()
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify({ points, count, note })
+                });
+
+                if (!response.ok) {
+                    const data = await response.json();
+                    throw new Error(data.error || '生成失败');
+                }
+
+                const data = await response.json();
+                generatedCodes = data.codes;
+                showGeneratedCodes(data.codes);
+                showToast(`成功生成 ${data.count} 个兑换码`);
+                loadCodes();
+            } catch (e) {
+                showToast(e.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '生成';
+            }
+        }
+
+        function showGeneratedCodes(codes) {
+            const container = document.getElementById('generated-codes');
+            const list = document.getElementById('generated-list');
+            container.style.display = 'block';
+            list.innerHTML = codes.map(c =>
+                `<span class="code-text" onclick="copyCode('${escapeHtml(c.code)}')">${escapeHtml(c.code)}</span>`
+            ).join('');
+        }
+
+        function copyCode(code) {
+            navigator.clipboard.writeText(code);
+            showToast('已复制: ' + code);
+        }
+
+        function copyAllCodes() {
+            const codes = generatedCodes.map(c => c.code).join('\n');
+            navigator.clipboard.writeText(codes);
+            showToast(`已复制 ${generatedCodes.length} 个兑换码`);
+        }
+
+        async function loadCodes() {
+            const status = document.getElementById('status-filter').value;
+            const points = document.getElementById('points-filter').value;
+            const createdStart = document.getElementById('created-start').value;
+            const createdEnd = document.getElementById('created-end').value;
+            const redeemedBy = document.getElementById('redeemed-by-filter').value;
+            const redeemedStart = document.getElementById('redeemed-start').value;
+            const redeemedEnd = document.getElementById('redeemed-end').value;
+
+            const params = new URLSearchParams({ page: currentPage, page_size: 20 });
+            if (status !== '') params.append('status', status);
+            if (points !== '') params.append('points', points);
+            if (createdStart !== '') params.append('created_start', createdStart);
+            if (createdEnd !== '') params.append('created_end', createdEnd);
+            if (redeemedBy !== '') params.append('redeemed_by', redeemedBy);
+            if (redeemedStart !== '') params.append('redeemed_start', redeemedStart);
+            if (redeemedEnd !== '') params.append('redeemed_end', redeemedEnd);
+
+            try {
+                const response = await fetch('/api/admin/redeem-codes?' + params.toString(), {
+                    credentials: 'include'
+                });
+                if (!response.ok) throw new Error('加载失败');
+
+                const data = await response.json();
+                renderCodes(data.codes);
+                renderPagination(data.page, data.total_pages);
+            } catch (e) {
+                document.getElementById('error-message').textContent = e.message;
+            }
+        }
+
+        function resetFilters() {
+            document.getElementById('status-filter').value = '';
+            document.getElementById('points-filter').value = '';
+            document.getElementById('created-start').value = '';
+            document.getElementById('created-end').value = '';
+            document.getElementById('redeemed-by-filter').value = '';
+            document.getElementById('redeemed-start').value = '';
+            document.getElementById('redeemed-end').value = '';
+            currentPage = 1;
+            loadCodes();
+        }
+
+        function renderCodes(codes) {
+            const tbody = document.getElementById('codes-list');
+            if (codes.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-secondary);">暂无数据</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = codes.map(c => {
+                const statusClass = c.status === 0 ? 'status-active' : c.status === 1 ? 'status-redeemed' : 'status-disabled';
+                const createdAt = new Date(c.created_at).toLocaleString('zh-CN');
+                let actions = '-';
+                if (c.status === 0) {
+                    actions = `<button class="btn-disable" onclick="disableCode(${c.id})">禁用</button>`;
+                } else if (c.status === 2) {
+                    actions = `<button class="btn-enable" onclick="enableCode(${c.id})">解禁</button>`;
+                }
+
+                let redeemInfo = '-';
+                if (c.status === 1 && c.redeemed_at) {
+                    const redeemedAt = new Date(c.redeemed_at).toLocaleString('zh-CN');
+                    redeemInfo = `${escapeHtml(c.redeemed_by_email) || '未知用户'}<br><span style="font-size:12px;color:var(--text-secondary);">${redeemedAt}</span>`;
+                }
+
+                return `<tr>
+                    <td><span class="code-text" onclick="copyCode('${escapeHtml(c.code)}')">${escapeHtml(c.code)}</span></td>
+                    <td>${c.points}</td>
+                    <td class="${statusClass}">${escapeHtml(c.status_text)}</td>
+                    <td>${createdAt}</td>
+                    <td>${escapeHtml(c.note) || '-'}</td>
+                    <td>${redeemInfo}</td>
+                    <td>${actions}</td>
+                </tr>`;
+            }).join('');
+        }
+
+        function renderPagination(page, totalPages) {
+            const container = document.getElementById('pagination');
+            if (totalPages <= 1) {
+                container.innerHTML = '';
+                return;
+            }
+            container.innerHTML = `
+                <button onclick="goToPage(${page - 1})" ${page <= 1 ? 'disabled' : ''}>上一页</button>
+                <span>第 ${page} / ${totalPages} 页</span>
+                <button onclick="goToPage(${page + 1})" ${page >= totalPages ? 'disabled' : ''}>下一页</button>
+            `;
+        }
+
+        function goToPage(page) {
+            currentPage = page;
+            loadCodes();
+        }
+
+        async function disableCode(codeId) {
+            if (!confirm('确定要禁用此兑换码吗？')) return;
+
+            try {
+                const response = await fetch('/api/admin/redeem-codes/disable', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': getCSRFToken()
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify({ code_id: codeId })
+                });
+
+                if (!response.ok) {
+                    const data = await response.json();
+                    throw new Error(data.error || '操作失败');
+                }
+
+                showToast('兑换码已禁用');
+                loadCodes();
+            } catch (e) {
+                showToast(e.message, 'error');
+            }
+        }
+
+        async function enableCode(codeId) {
+            if (!confirm('确定要解禁此兑换码吗？')) return;
+
+            try {
+                const response = await fetch('/api/admin/redeem-codes/enable', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': getCSRFToken()
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify({ code_id: codeId })
+                });
+
+                if (!response.ok) {
+                    const data = await response.json();
+                    throw new Error(data.error || '操作失败');
+                }
+
+                showToast('兑换码已解禁');
+                loadCodes();
+            } catch (e) {
+                showToast(e.message, 'error');
+            }
+        }
+
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.style.background = type === 'error' ? '#ef4444' : '#22c55e';
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 2000);
+        }
+
+        checkAccess();
+    </script>
+</body>
+</html>

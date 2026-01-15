@@ -29,6 +29,7 @@ type Server struct {
 	adminHandler      *handler.AdminHandler
 	pointsHandler     *handler.PointsHandler
 	siteConfigHandler *handler.SiteConfigHandler
+	redeemHandler     *handler.RedeemHandler
 	authService       *auth.Service
 	siteConfigService *siteconfig.Service
 	overrideConfig    siteconfig.OverrideConfig
@@ -95,6 +96,7 @@ func NewServer(addr, staticDir string, config ServerConfig, db *gorm.DB, siteCon
 	adminHandler := handler.NewAdminHandler(authService)
 	pointsHandler := handler.NewPointsHandler(authService)
 	siteConfigHandler := handler.NewSiteConfigHandler(authService, siteConfigService)
+	redeemHandler := handler.NewRedeemHandler(authService)
 
 	return &Server{
 		addr:              addr,
@@ -105,6 +107,7 @@ func NewServer(addr, staticDir string, config ServerConfig, db *gorm.DB, siteCon
 		adminHandler:      adminHandler,
 		pointsHandler:     pointsHandler,
 		siteConfigHandler: siteConfigHandler,
+		redeemHandler:     redeemHandler,
 		authService:       authService,
 		siteConfigService: siteConfigService,
 		overrideConfig:    overrideConfig,
@@ -162,6 +165,13 @@ func (s *Server) Start() error {
 
 	mux.HandleFunc("/api/admin/site/config", s.siteConfigHandler.Handle)
 
+	mux.HandleFunc("/api/admin/redeem-codes/generate", s.redeemHandler.GenerateCodes)
+	mux.HandleFunc("/api/admin/redeem-codes", s.redeemHandler.ListCodes)
+	mux.HandleFunc("/api/admin/redeem-codes/disable", s.redeemHandler.DisableCode)
+	mux.HandleFunc("/api/admin/redeem-codes/enable", s.redeemHandler.EnableCode)
+	mux.HandleFunc("/api/user/redeem", s.redeemHandler.Redeem)
+	mux.HandleFunc("/api/user/managed-orgs", s.redeemHandler.GetManagedOrgs)
+
 	serveHTML := func(filename string) http.HandlerFunc {
 		return func(w http.ResponseWriter, r *http.Request) {
 			r.URL.Path = "/" + filename
@@ -178,6 +188,7 @@ func (s *Server) Start() error {
 	mux.HandleFunc("/admin/organizations", serveHTML("admin/organizations.html"))
 	mux.HandleFunc("/admin/site", serveHTML("admin/site.html"))
 	mux.HandleFunc("/admin/points", serveHTML("admin/points.html"))
+	mux.HandleFunc("/admin/redeem-codes", serveHTML("admin/redeem-codes.html"))
 
 	htmlRedirects := map[string]string{
 		"/login.html":           "/login",

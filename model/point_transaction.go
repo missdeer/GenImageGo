@@ -28,6 +28,8 @@ const (
 	PointReasonOrgInitial    PointReason = "org_initial"
 	PointReasonOrgAdjust     PointReason = "org_adjust"
 	PointReasonOrgAllocOut   PointReason = "org_allocation_out"
+	PointReasonRedeemCode    PointReason = "redeem_code"
+	PointReasonRedeemCodeOrg PointReason = "redeem_code_org"
 )
 
 type PointTransaction struct {

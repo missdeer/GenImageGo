@@ -73,6 +73,14 @@ async function initApplication() {
                     if (siteConfigNav) {
                         siteConfigNav.style.display = 'flex';
                     }
+                    const redeemCodesNav = document.getElementById('redeem-codes-nav');
+                    if (redeemCodesNav) {
+                        redeemCodesNav.style.display = 'flex';
+                    }
+                    const userMenuRedeem = document.getElementById('user-menu-redeem');
+                    if (userMenuRedeem) {
+                        userMenuRedeem.style.display = 'flex';
+                    }
                 }
             }
         }, 50);
