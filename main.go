@@ -284,6 +284,8 @@ func main() {
 	}
 
 	// 调用 API 生成图片
+	fmt.Printf("正在生成图片，使用模型: %s ...\n", modelName)
+
 	var imageBytes []byte
 	var textResponse string
 	var err error
@@ -345,7 +347,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	fmt.Printf("图片已保存到: %s\n", outputValue)
+	fmt.Printf("生成完成，图片已保存到: %s\n", outputValue)
 }
 
 // getConfigValue 获取配置值，优先级：CLI > 配置文件 > 默认值
