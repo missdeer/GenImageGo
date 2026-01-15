@@ -11,7 +11,8 @@ let UI = {};
             fileInput: document.getElementById('file-input'),
             previewArea: document.getElementById('preview-area'),
             sendBtn: document.getElementById('send-btn'),
-            enhanceBtn: document.getElementById('enhance-btn')
+            enhanceBtn: document.getElementById('enhance-btn'),
+            clearBtn: document.getElementById('clear-btn')
         };
 
         // Initialize Tools
@@ -64,7 +65,7 @@ let UI = {};
         if (UI.textarea) {
             UI.textarea.addEventListener('input', function() { checkInput(); adjustTextareaHeight(); });
             UI.textarea.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } });
-            
+
             // Paste Support
             UI.textarea.addEventListener('paste', async (e) => {
                 const items = e.clipboardData?.items;
@@ -79,6 +80,13 @@ let UI = {};
                         }
                     }
                 }
+            });
+        }
+
+        // Clear button keyboard support
+        if (UI.clearBtn) {
+            UI.clearBtn.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); clearInput(); }
             });
         }
 
@@ -604,10 +612,25 @@ let UI = {};
     }
 
     function checkInput(){
-        const hasText=!!(UI.textarea&&UI.textarea.value.trim().length>0);
+        const hasText=!!(UI.textarea&&UI.textarea.value.length>0);
         const hasImages=state.images.length>0;
-        if(UI.sendBtn) UI.sendBtn.classList.toggle('active',hasText||hasImages);
-        if(UI.enhanceBtn) UI.enhanceBtn.classList.toggle('active',hasText);
+        const hasNonEmptyText=!!(UI.textarea&&UI.textarea.value.trim().length>0);
+        if(UI.sendBtn) UI.sendBtn.classList.toggle('active',hasNonEmptyText||hasImages);
+        if(UI.enhanceBtn) UI.enhanceBtn.classList.toggle('active',hasNonEmptyText);
+        if(UI.clearBtn){
+            UI.clearBtn.classList.toggle('active',hasText);
+            UI.clearBtn.setAttribute('tabindex',hasText?'0':'-1');
+            UI.clearBtn.setAttribute('aria-hidden',hasText?'false':'true');
+        }
+    }
+
+    function clearInput(){
+        if(UI.textarea){
+            UI.textarea.value='';
+            adjustTextareaHeight();
+            checkInput();
+            UI.textarea.focus();
+        }
     }
     async function handleFiles(files){if(state.images.length+files.length>14){alert("最多14张");return}for(let file of files){if(!file.type.startsWith('image/'))continue;state.images.push(await compressImage(file))}renderPreviews();checkInput();if(UI.fileInput)UI.fileInput.value=''}function renderPreviews(){if(UI.previewArea){UI.previewArea.innerHTML='';if(state.images.length>0){UI.previewArea.classList.add('has-images');state.images.forEach((img,i)=>{const div=document.createElement('div');div.className='preview-item';div.style.backgroundImage=`url(${img.preview})`;div.innerHTML=`<div class="preview-close" data-action="remove-preview" data-index="${i}">×</div>`;UI.previewArea.appendChild(div)})}else UI.previewArea.classList.remove('has-images')}}
 
