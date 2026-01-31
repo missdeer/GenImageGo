@@ -32,7 +32,7 @@
 .brand-area { display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 18px; color: #202124; }
 [data-theme="dark"] .brand-area { color: var(--text-main) !important; }
 
-.header-actions { display: flex; gap: 10px; }
+.header-actions { display: flex; align-items: center; gap: 10px; }
 [data-theme="dark"] .header-actions { color: var(--text-main) !important; }
 
 .header-icon-btn {
