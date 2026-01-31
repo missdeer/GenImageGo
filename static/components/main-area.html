@@ -92,6 +92,38 @@
                             <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
                         </svg>
                     </div>
+                    <div class="resolution-dropdown" id="resolution-dropdown">
+                        <div class="resolution-btn" id="resolution-btn" onclick="toggleResolutionMenu(event)">
+                            <span id="resolution-text">4K</span>
+                            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="6 9 12 15 18 9"></polyline>
+                            </svg>
+                        </div>
+                        <div class="resolution-menu" id="resolution-menu">
+                            <div class="resolution-option" data-val="1024x1024" onclick="selectResolution('1024x1024', '1K')">1K</div>
+                            <div class="resolution-option" data-val="2048x2048" onclick="selectResolution('2048x2048', '2K')">2K</div>
+                            <div class="resolution-option active" data-val="4K" onclick="selectResolution('4K', '4K')">4K</div>
+                        </div>
+                    </div>
+                    <div class="resolution-dropdown" id="aspect-ratio-dropdown">
+                        <div class="resolution-btn" id="aspect-ratio-btn" onclick="toggleAspectRatioMenu(event)">
+                            <span id="aspect-ratio-text">Auto</span>
+                            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="6 9 12 15 18 9"></polyline>
+                            </svg>
+                        </div>
+                        <div class="resolution-menu aspect-ratio-menu" id="aspect-ratio-menu">
+                            <div class="resolution-option active" data-val="auto" onclick="selectAspectRatio('auto', 'Auto')">Auto</div>
+                            <div class="resolution-option" data-val="21:9" onclick="selectAspectRatio('21:9', '21:9')">21:9</div>
+                            <div class="resolution-option" data-val="16:9" onclick="selectAspectRatio('16:9', '16:9')">16:9</div>
+                            <div class="resolution-option" data-val="3:2" onclick="selectAspectRatio('3:2', '3:2')">3:2</div>
+                            <div class="resolution-option" data-val="4:3" onclick="selectAspectRatio('4:3', '4:3')">4:3</div>
+                            <div class="resolution-option" data-val="1:1" onclick="selectAspectRatio('1:1', '1:1')">1:1</div>
+                            <div class="resolution-option" data-val="3:4" onclick="selectAspectRatio('3:4', '3:4')">3:4</div>
+                            <div class="resolution-option" data-val="2:3" onclick="selectAspectRatio('2:3', '2:3')">2:3</div>
+                            <div class="resolution-option" data-val="9:16" onclick="selectAspectRatio('9:16', '9:16')">9:16</div>
+                        </div>
+                    </div>
                     <div class="input-actions-spacer"></div>
                     <div class="icon-btn enhance-btn" id="enhance-btn" title="优化提示词" onclick="enhancePrompt()">
                         <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2"

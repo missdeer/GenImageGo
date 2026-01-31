@@ -123,12 +123,14 @@ let UI = {};
 
         // Settings Buttons
         document.querySelectorAll('.res-btn').forEach(btn => btn.addEventListener('click', () => {
-            document.querySelectorAll('.res-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active'); state.resolution = btn.dataset.val;
+            const value = btn.dataset.val;
+            const label = btn.textContent.trim();
+            selectResolution(value, label);
         }));
         document.querySelectorAll('.ratio-card').forEach(card => card.addEventListener('click', () => {
-            document.querySelectorAll('.ratio-card').forEach(c => c.classList.remove('active'));
-            card.classList.add('active'); state.aspectRatio = card.dataset.val;
+            const value = card.dataset.val;
+            const label = value === 'auto' ? 'Auto' : value;
+            selectAspectRatio(value, label);
         }));
 
         adjustTextareaHeight();
@@ -138,12 +140,8 @@ let UI = {};
     function activateStickerMode(){createNewSession("表情包制作").then(()=>{
         const stickerPrompt="为我生成图中角色的绘制 Q 版的，LINE 风格的半身像表情包，注意头饰要正确\n彩色手绘风格，使用 4x6 布局，涵盖各种各样的常用聊天语句，或是一些有关的娱乐 meme\n其他需求：不要原图复制。所有标注为手写简体中文。    ";
         UI.textarea.value=stickerPrompt;
-        state.resolution='4K';
-        document.querySelectorAll('.res-btn').forEach(b=>b.classList.remove('active'));
-        document.querySelector('.res-btn[data-val="4K"]').classList.add('active');
-        state.aspectRatio='16:9';
-        document.querySelectorAll('.ratio-card').forEach(c=>c.classList.remove('active'));
-        document.querySelector('.ratio-card[data-val="16:9"]').classList.add('active');
+        selectResolution('4K', '4K');
+        selectAspectRatio('16:9', '16:9');
         alert("已进入表情包模式！\n请点击输入框左侧图标上传一张角色参考图，然后点击发送。");
         adjustTextareaHeight();
         checkInput();
@@ -633,6 +631,102 @@ let UI = {};
             UI.textarea.focus();
         }
     }
+
+    // Resolution dropdown functions
+    function toggleResolutionMenu(event) {
+        event.stopPropagation();
+        const menu = document.getElementById('resolution-menu');
+        const btn = document.getElementById('resolution-btn');
+        const isOpen = menu.classList.contains('active');
+
+        // Close menu if already open
+        if (isOpen) {
+            menu.classList.remove('active');
+            btn.classList.remove('active');
+            document.removeEventListener('click', closeResolutionMenu);
+        } else {
+            menu.classList.add('active');
+            btn.classList.add('active');
+            setTimeout(() => document.addEventListener('click', closeResolutionMenu), 0);
+        }
+    }
+
+    function closeResolutionMenu() {
+        const menu = document.getElementById('resolution-menu');
+        const btn = document.getElementById('resolution-btn');
+        if (menu) menu.classList.remove('active');
+        if (btn) btn.classList.remove('active');
+        document.removeEventListener('click', closeResolutionMenu);
+    }
+
+    function selectResolution(value, label) {
+        state.resolution = value;
+        document.getElementById('resolution-text').textContent = label;
+
+        // Update active state in menu (only resolution menu)
+        document.querySelectorAll('#resolution-menu .resolution-option').forEach(opt => {
+            opt.classList.toggle('active', opt.dataset.val === value);
+        });
+
+        // Also sync with settings panel if exists
+        document.querySelectorAll('.res-btn').forEach(b => b.classList.remove('active'));
+        const settingsBtn = document.querySelector(`.res-btn[data-val="${value}"]`);
+        if (settingsBtn) settingsBtn.classList.add('active');
+
+        closeResolutionMenu();
+    }
+
+    // Expose functions globally
+    window.toggleResolutionMenu = toggleResolutionMenu;
+    window.selectResolution = selectResolution;
+
+    // Aspect ratio dropdown functions
+    function toggleAspectRatioMenu(event) {
+        event.stopPropagation();
+        closeResolutionMenu(); // Close resolution menu if open
+        const menu = document.getElementById('aspect-ratio-menu');
+        const btn = document.getElementById('aspect-ratio-btn');
+        const isOpen = menu.classList.contains('active');
+
+        if (isOpen) {
+            menu.classList.remove('active');
+            btn.classList.remove('active');
+            document.removeEventListener('click', closeAspectRatioMenu);
+        } else {
+            menu.classList.add('active');
+            btn.classList.add('active');
+            setTimeout(() => document.addEventListener('click', closeAspectRatioMenu), 0);
+        }
+    }
+
+    function closeAspectRatioMenu() {
+        const menu = document.getElementById('aspect-ratio-menu');
+        const btn = document.getElementById('aspect-ratio-btn');
+        if (menu) menu.classList.remove('active');
+        if (btn) btn.classList.remove('active');
+        document.removeEventListener('click', closeAspectRatioMenu);
+    }
+
+    function selectAspectRatio(value, label) {
+        state.aspectRatio = value;
+        document.getElementById('aspect-ratio-text').textContent = label;
+
+        // Update active state in menu
+        document.querySelectorAll('#aspect-ratio-menu .resolution-option').forEach(opt => {
+            opt.classList.toggle('active', opt.dataset.val === value);
+        });
+
+        // Also sync with settings panel if exists
+        document.querySelectorAll('.ratio-card').forEach(c => c.classList.remove('active'));
+        const settingsCard = document.querySelector(`.ratio-card[data-val="${value}"]`);
+        if (settingsCard) settingsCard.classList.add('active');
+
+        closeAspectRatioMenu();
+    }
+
+    window.toggleAspectRatioMenu = toggleAspectRatioMenu;
+    window.selectAspectRatio = selectAspectRatio;
+
     async function handleFiles(files){if(state.images.length+files.length>14){alert("最多14张");return}for(let file of files){if(!file.type.startsWith('image/'))continue;state.images.push(await compressImage(file))}renderPreviews();checkInput();if(UI.fileInput)UI.fileInput.value=''}function renderPreviews(){if(UI.previewArea){UI.previewArea.innerHTML='';if(state.images.length>0){UI.previewArea.classList.add('has-images');state.images.forEach((img,i)=>{const div=document.createElement('div');div.className='preview-item';div.style.backgroundImage=`url(${img.preview})`;div.innerHTML=`<div class="preview-close" data-action="remove-preview" data-index="${i}">×</div>`;UI.previewArea.appendChild(div)})}else UI.previewArea.classList.remove('has-images')}}
 
     // 注册 main.js 相关的动作处理器（注册表在 utils.js 中定义）
