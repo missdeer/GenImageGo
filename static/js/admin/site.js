@@ -47,8 +47,11 @@
             configs = data.configs || [];
 
             renderConfigs();
+            initUserSettings();
             loading.style.display = 'none';
             configForm.style.display = 'block';
+            document.getElementById('user-settings').style.display = 'block';
+            document.getElementById('config-actions').style.display = 'flex';
         } catch (err) {
             loading.style.display = 'none';
             errorMsg.textContent = err.message;
@@ -78,15 +81,38 @@
                 input.max = '1000';
             }
 
-            const hint = document.createElement('span');
-            hint.className = 'config-hint';
-            hint.textContent = 'key: ' + config.key;
-
             item.appendChild(label);
             item.appendChild(input);
-            item.appendChild(hint);
             container.appendChild(item);
         });
+    }
+
+    function initUserSettings() {
+        const contextToggle = document.getElementById('context-toggle');
+        const contextCount = document.getElementById('context-count');
+        if (contextToggle && contextCount) {
+            contextToggle.checked = getUserStorage('use_context') === 'true';
+            contextCount.value = getUserStorage('context_count') || '5';
+        }
+
+        const autoSaveToggle = document.getElementById('auto-save-toggle');
+        if (autoSaveToggle) {
+            autoSaveToggle.checked = getUserStorage('auto_save_enabled') === 'true';
+        }
+    }
+
+    function saveUserSettings() {
+        const contextToggle = document.getElementById('context-toggle');
+        const contextCount = document.getElementById('context-count');
+        if (contextToggle && contextCount) {
+            setUserStorage('use_context', contextToggle.checked);
+            setUserStorage('context_count', contextCount.value);
+        }
+
+        const autoSaveToggle = document.getElementById('auto-save-toggle');
+        if (autoSaveToggle) {
+            setUserStorage('auto_save_enabled', autoSaveToggle.checked ? 'true' : '');
+        }
     }
 
     window.saveConfigs = async function() {
@@ -123,6 +149,8 @@
                 const data = await response.json();
                 throw new Error(data.error || data.error?.message || '保存失败');
             }
+
+            saveUserSettings();
 
             saveStatus.textContent = '保存成功';
             saveStatus.className = 'save-status success';
