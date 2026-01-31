@@ -561,8 +561,9 @@ let UI = {};
     function adjustTextareaHeight(){
         if(!UI.textarea) return;
         UI.textarea.style.height='auto';
+        const minHeight=72;
         const maxHeight=150;
-        UI.textarea.style.height=Math.min(UI.textarea.scrollHeight,maxHeight)+'px';
+        UI.textarea.style.height=Math.max(minHeight,Math.min(UI.textarea.scrollHeight,maxHeight))+'px';
     }
 
     async function compressImage(file){
