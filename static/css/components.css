@@ -69,7 +69,7 @@
 
 textarea {
     flex: 1; border: none; background: transparent; padding: 0 30px 0 8px;
-    font-size: 16px; resize: none; min-height: 72px; max-height: 150px;
+    font-size: 16px; resize: none; min-height: 48px; max-height: 150px;
     outline: none; font-family: inherit; color: var(--text-main); line-height: 24px; overflow-y: auto;
 }
 #file-input { display: none; }
