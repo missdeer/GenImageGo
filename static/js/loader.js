@@ -38,7 +38,6 @@ async function initApplication() {
         loadComponent('mobile-header', 'components/header.html'),
         loadComponent('left-sidebar', 'components/sidebar.html'),
         loadComponent('main-area', 'components/main-area.html'),
-        loadComponent('right-sidebar', 'components/settings.html'),
         loadComponent('modals-container', 'components/modals.html'),
         loadComponent('overlays-container', 'components/overlays.html')
     ]);

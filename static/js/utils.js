@@ -80,10 +80,9 @@ function copyText(btn){navigator.clipboard.writeText(btn.getAttribute('data-text
 function openLightbox(src){document.getElementById('lightbox-image').src=src;document.getElementById('lightbox').classList.add('active')}
 function closeLightbox(){document.getElementById('lightbox').classList.remove('active');setTimeout(()=>document.getElementById('lightbox-image').src='',200)}
 
-const leftSidebar=document.getElementById('left-sidebar');const rightSidebar=document.getElementById('right-sidebar');const overlay=document.getElementById('overlay');
-function toggleLeftSidebar(){leftSidebar.classList.toggle('open');overlay.classList.toggle('active');rightSidebar.classList.remove('open')}
-function toggleSettings(){rightSidebar.classList.toggle('open');overlay.classList.toggle('active');leftSidebar.classList.remove('open')}
-function closeAllSidebars(){leftSidebar.classList.remove('open');rightSidebar.classList.remove('open');overlay.classList.remove('active')}
+const leftSidebar=document.getElementById('left-sidebar');const overlay=document.getElementById('overlay');
+function toggleLeftSidebar(){leftSidebar.classList.toggle('open');overlay.classList.toggle('active')}
+function closeAllSidebars(){leftSidebar.classList.remove('open');overlay.classList.remove('active')}
 
 function toggleLeftSidebarDesktop(){
     const isCollapsed = leftSidebar.classList.toggle('collapsed');
@@ -92,23 +91,11 @@ function toggleLeftSidebarDesktop(){
     setUserStorage('left_sidebar_collapsed', isCollapsed);
 }
 
-function toggleRightSidebarDesktop(){
-    const isCollapsed = rightSidebar.classList.toggle('collapsed');
-    const btn = document.getElementById('right-sidebar-toggle');
-    if(btn) btn.classList.toggle('active', isCollapsed);
-    setUserStorage('right_sidebar_collapsed', isCollapsed);
-}
-
 function restoreSidebarState(){
     if (!window.currentUser) return;
     if(getUserStorage('left_sidebar_collapsed') === 'true'){
         leftSidebar.classList.add('collapsed');
         const btn = document.getElementById('left-sidebar-toggle');
-        if(btn) btn.classList.add('active');
-    }
-    if(getUserStorage('right_sidebar_collapsed') === 'true'){
-        rightSidebar.classList.add('collapsed');
-        const btn = document.getElementById('right-sidebar-toggle');
         if(btn) btn.classList.add('active');
     }
 }

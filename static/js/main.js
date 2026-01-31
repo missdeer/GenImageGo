@@ -746,7 +746,5 @@ let UI = {};
         'send-message': () => sendMessage(),
         'enhance-prompt': () => enhancePrompt(),
         'toggle-left-sidebar': () => toggleLeftSidebar(),
-        'toggle-settings': () => toggleSettings(),
-        'toggle-left-sidebar-desktop': () => toggleLeftSidebarDesktop(),
-        'toggle-right-sidebar-desktop': () => toggleRightSidebarDesktop()
+        'toggle-left-sidebar-desktop': () => toggleLeftSidebarDesktop()
     });
