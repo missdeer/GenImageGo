@@ -14,6 +14,9 @@ else
     IS_MACOS :=
 endif
 
+# Build flags
+LDFLAGS := -ldflags="-s -w"
+
 # Output directory
 BINDIR := bin
 
@@ -34,37 +37,37 @@ ifdef IS_MACOS
 # macOS: Build FAT binary (Universal Binary) for arm64 and amd64
 $(MAIN):
 	@mkdir -p $(BINDIR)
-	GOARCH=arm64 go build -o $@_arm64 .
-	GOARCH=amd64 go build -o $@_amd64 .
+	GOARCH=arm64 go build $(LDFLAGS) -o $@_arm64 .
+	GOARCH=amd64 go build $(LDFLAGS) -o $@_amd64 .
 	lipo -create -output $@ $@_arm64 $@_amd64
 	@rm -f $@_arm64 $@_amd64
 
 $(SEED):
 	@mkdir -p $(BINDIR)
-	GOARCH=arm64 go build -o $@_arm64 ./cmd/seed
-	GOARCH=amd64 go build -o $@_amd64 ./cmd/seed
+	GOARCH=arm64 go build $(LDFLAGS) -o $@_arm64 ./cmd/seed
+	GOARCH=amd64 go build $(LDFLAGS) -o $@_amd64 ./cmd/seed
 	lipo -create -output $@ $@_arm64 $@_amd64
 	@rm -f $@_arm64 $@_amd64
 
 $(ADDUSER):
 	@mkdir -p $(BINDIR)
-	GOARCH=arm64 go build -o $@_arm64 ./cmd/adduser
-	GOARCH=amd64 go build -o $@_amd64 ./cmd/adduser
+	GOARCH=arm64 go build $(LDFLAGS) -o $@_arm64 ./cmd/adduser
+	GOARCH=amd64 go build $(LDFLAGS) -o $@_amd64 ./cmd/adduser
 	lipo -create -output $@ $@_arm64 $@_amd64
 	@rm -f $@_arm64 $@_amd64
 else
 # Windows/Linux: Build single architecture
 $(MAIN):
 	@mkdir -p $(BINDIR)
-	go build -o $@ .
+	go build $(LDFLAGS) -o $@ .
 
 $(SEED):
 	@mkdir -p $(BINDIR)
-	go build -o $@ ./cmd/seed
+	go build $(LDFLAGS) -o $@ ./cmd/seed
 
 $(ADDUSER):
 	@mkdir -p $(BINDIR)
-	go build -o $@ ./cmd/adduser
+	go build $(LDFLAGS) -o $@ ./cmd/adduser
 endif
 
 clean:
