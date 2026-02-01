@@ -1,4 +1,4 @@
-.PHONY: all clean main seed adduser
+.PHONY: all clean
 
 # Detect OS and architecture
 UNAME_S := $(shell uname -s 2>/dev/null || echo Windows)
@@ -25,31 +25,30 @@ MAIN := $(BINDIR)/genImage$(EXT)
 SEED := $(BINDIR)/seed$(EXT)
 ADDUSER := $(BINDIR)/adduser$(EXT)
 
-all: main seed adduser
+# Source files
+MAIN_SRCS := $(wildcard *.go) $(wildcard */*.go) go.mod go.sum
+SEED_SRCS := $(wildcard cmd/seed/*.go) $(wildcard model/*.go) go.mod go.sum
+ADDUSER_SRCS := $(wildcard cmd/adduser/*.go) $(wildcard model/*.go) go.mod go.sum
 
-main: $(MAIN)
-
-seed: $(SEED)
-
-adduser: $(ADDUSER)
+all: $(MAIN) $(SEED) $(ADDUSER)
 
 ifdef IS_MACOS
 # macOS: Build FAT binary (Universal Binary) for arm64 and amd64
-$(MAIN):
+$(MAIN): $(MAIN_SRCS)
 	@mkdir -p $(BINDIR)
 	GOARCH=arm64 go build $(LDFLAGS) -o $@_arm64 .
 	GOARCH=amd64 go build $(LDFLAGS) -o $@_amd64 .
 	lipo -create -output $@ $@_arm64 $@_amd64
 	@rm -f $@_arm64 $@_amd64
 
-$(SEED):
+$(SEED): $(SEED_SRCS)
 	@mkdir -p $(BINDIR)
 	GOARCH=arm64 go build $(LDFLAGS) -o $@_arm64 ./cmd/seed
 	GOARCH=amd64 go build $(LDFLAGS) -o $@_amd64 ./cmd/seed
 	lipo -create -output $@ $@_arm64 $@_amd64
 	@rm -f $@_arm64 $@_amd64
 
-$(ADDUSER):
+$(ADDUSER): $(ADDUSER_SRCS)
 	@mkdir -p $(BINDIR)
 	GOARCH=arm64 go build $(LDFLAGS) -o $@_arm64 ./cmd/adduser
 	GOARCH=amd64 go build $(LDFLAGS) -o $@_amd64 ./cmd/adduser
@@ -57,15 +56,15 @@ $(ADDUSER):
 	@rm -f $@_arm64 $@_amd64
 else
 # Windows/Linux: Build single architecture
-$(MAIN):
+$(MAIN): $(MAIN_SRCS)
 	@mkdir -p $(BINDIR)
 	go build $(LDFLAGS) -o $@ .
 
-$(SEED):
+$(SEED): $(SEED_SRCS)
 	@mkdir -p $(BINDIR)
 	go build $(LDFLAGS) -o $@ ./cmd/seed
 
-$(ADDUSER):
+$(ADDUSER): $(ADDUSER_SRCS)
 	@mkdir -p $(BINDIR)
 	go build $(LDFLAGS) -o $@ ./cmd/adduser
 endif

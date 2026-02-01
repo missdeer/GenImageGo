@@ -284,6 +284,11 @@ func (s *Server) Start() error {
 		fmt.Println("\n正在关闭服务器...")
 		close(s.stopChan)
 		s.httpServer.Close()
+
+		if sqlDB, err := s.db.DB(); err == nil {
+			sqlDB.Close()
+			fmt.Println("数据库连接已关闭")
+		}
 	}()
 
 	fmt.Printf("服务器启动成功: http://%s\n", s.addr)
